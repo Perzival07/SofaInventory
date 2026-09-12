@@ -24,6 +24,13 @@ import {
   updateTaxConfig,
   getTransitionalCreditReport,
   isDbConfigured,
+  getAllItems,
+  getItemById,
+  getItemRestockHistory,
+  createItem,
+  restockItem,
+  updateItem,
+  deleteItem,
 } from "@/lib/db";
 import {
   calculateTurnoverStatus,
@@ -304,26 +311,7 @@ export async function fetchInventoryAction(
   search?: string,
   category?: string
 ): Promise<{ items: InventoryItem[]; summary: InventorySummary }> {
-  const goods = await getAllFinishedGoods();
-  let items: InventoryItem[] = goods.map((g) => ({
-    id: g.id,
-    name: g.name,
-    category: g.category,
-    current_quantity: g.current_quantity,
-    current_cost_per_unit: g.selling_price,
-    total_value: g.current_quantity * g.selling_price,
-    last_restocked_at: new Date().toISOString(),
-  }));
-
-  if (search) {
-    const q = search.toLowerCase();
-    items = items.filter(
-      (i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q)
-    );
-  }
-  if (category && category !== "All") {
-    items = items.filter((i) => i.category.toLowerCase() === category.toLowerCase());
-  }
+  const items = await getAllItems(search, category);
 
   const totalItems = items.length;
   const totalStockUnits = items.reduce((sum, item) => sum + item.current_quantity, 0);
@@ -351,32 +339,10 @@ export async function fetchItemHistoryAction(itemId: number): Promise<{
   item: InventoryItem | null;
   history: RestockHistoryEntry[];
 }> {
-  const goods = await getAllFinishedGoods();
-  const good = goods.find((g) => g.id === itemId);
-  if (!good) return { item: null, history: [] };
-
-  const item: InventoryItem = {
-    id: good.id,
-    name: good.name,
-    category: good.category,
-    current_quantity: good.current_quantity,
-    current_cost_per_unit: good.selling_price,
-    total_value: good.current_quantity * good.selling_price,
-    last_restocked_at: new Date().toISOString(),
-  };
-
-  const history: RestockHistoryEntry[] = [
-    {
-      id: 1,
-      item_id: good.id,
-      quantity_added: good.current_quantity,
-      cost_per_unit: good.current_cost_per_unit,
-      restock_date: new Date().toISOString().split("T")[0],
-      note: "Initial production batch",
-      created_at: new Date().toISOString(),
-    },
-  ];
-
+  const [item, history] = await Promise.all([
+    getItemById(itemId),
+    getItemRestockHistory(itemId),
+  ]);
   return { item, history };
 }
 
@@ -386,18 +352,17 @@ export async function addItemAction(input: AddItemInput): Promise<{
   error?: string;
 }> {
   try {
-    const newItem: InventoryItem = {
-      id: Date.now(),
-      name: input.name,
-      category: input.category,
-      current_quantity: input.initial_quantity,
-      current_cost_per_unit: input.initial_cost_per_unit,
-      total_value: input.initial_quantity * input.initial_cost_per_unit,
-      last_restocked_at: new Date().toISOString(),
-    };
+    if (!input.name || input.name.trim() === "") {
+      return { success: false, error: "Item name is required." };
+    }
+    if (!input.category || input.category.trim() === "") {
+      return { success: false, error: "Category is required." };
+    }
+    const item = await createItem(input);
     revalidatePath("/");
-    return { success: true, item: newItem };
+    return { success: true, item };
   } catch (err) {
+    console.error("Failed to add item:", err);
     return { success: false, error: err instanceof Error ? err.message : "Failed to add item" };
   }
 }
@@ -407,15 +372,20 @@ export async function restockItemAction(
   input: RestockInput
 ): Promise<{ success: boolean; item?: InventoryItem; error?: string }> {
   try {
-    await restockFinishedGood(itemId, {
-      quantity_added: input.quantity_added,
-      cost_per_unit: input.cost_per_unit,
-      restock_date: input.restock_date,
-      note: input.note,
-    });
+    if (!itemId || itemId <= 0) {
+      return { success: false, error: "Invalid item selected for restocking." };
+    }
+    if (!input.quantity_added || input.quantity_added <= 0) {
+      return { success: false, error: "Quantity added must be at least 1." };
+    }
+    if (input.cost_per_unit < 0) {
+      return { success: false, error: "Cost per unit cannot be negative." };
+    }
+    const item = await restockItem(itemId, input);
     revalidatePath("/");
-    return { success: true };
+    return { success: true, item };
   } catch (err) {
+    console.error("Failed to restock item:", err);
     return { success: false, error: err instanceof Error ? err.message : "Failed to restock item" };
   }
 }
@@ -425,10 +395,18 @@ export async function editItemAction(
   input: EditItemInput
 ): Promise<{ success: boolean; item?: InventoryItem; error?: string }> {
   try {
+    if (!input.name || input.name.trim() === "") {
+      return { success: false, error: "Item name is required." };
+    }
+    if (!input.category || input.category.trim() === "") {
+      return { success: false, error: "Category is required." };
+    }
+    const item = await updateItem(itemId, input);
     revalidatePath("/");
-    return { success: true };
+    return { success: true, item };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Failed to edit item" };
+    console.error("Failed to update item:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Failed to update item" };
   }
 }
 
@@ -436,9 +414,11 @@ export async function deleteItemAction(
   itemId: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await deleteItem(itemId);
     revalidatePath("/");
     return { success: true };
   } catch (err) {
+    console.error("Failed to delete item:", err);
     return { success: false, error: err instanceof Error ? err.message : "Failed to delete item" };
   }
 }

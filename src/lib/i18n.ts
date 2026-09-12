@@ -15,6 +15,7 @@ export const DICTIONARY = {
     db_connected: "Vercel Postgres (Neon) Connected",
 
     // Navigation Tabs
+    tab_inventory: "Furniture Inventory & Stock",
     tab_retail: "Retail & Showroom",
     tab_production: "In-House WIP & Factory",
     tab_job_work: "Job Work (Vendor Stock)",
@@ -94,6 +95,7 @@ export const DICTIONARY = {
     db_connected: "ভার্সেল পোস্টগ্রেস ডাটাবেস সংযুক্ত",
 
     // Navigation Tabs
+    tab_inventory: "ফার্নিচার স্টক ও ইনভেন্টরি",
     tab_retail: "শোরুম ও খুচরো বিক্রি",
     tab_production: "কারখানা ও উৎপাদন (WIP)",
     tab_job_work: "জব ওয়ার্ক (কারিগরদের স্টক)",

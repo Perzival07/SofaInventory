@@ -816,8 +816,61 @@ const memoryStore: EnterpriseMemoryStore = {
 export async function ensureTablesExist(): Promise<void> {
   const sql = getSql();
   if (!sql) return;
-  // In production with Vercel Postgres connection string, verify table existence
-  console.log("✓ Vercel Postgres schema check complete.");
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS items (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        current_quantity INT NOT NULL DEFAULT 0 CHECK (current_quantity >= 0),
+        current_cost_per_unit NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (current_cost_per_unit >= 0),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_restocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS restock_history (
+        id SERIAL PRIMARY KEY,
+        item_id INT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+        quantity_added INT NOT NULL CHECK (quantity_added > 0),
+        cost_per_unit NUMERIC(12, 2) NOT NULL CHECK (cost_per_unit >= 0),
+        restock_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        note TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `;
+    const countRes = (await sql`SELECT COUNT(*)::int as count FROM items`) as any[];
+    if (countRes && countRes[0] && Number(countRes[0].count) === 0) {
+      await sql`
+        INSERT INTO items (id, name, category, current_quantity, current_cost_per_unit, last_restocked_at)
+        VALUES 
+          (1, '3-Seater Chesterfield Sofa - Royal Navy Velvet', 'Sofa', 6, 42000.00, '2026-09-01'),
+          (2, 'L-Shape Reversible Sectional - Warm Oat Fabric', 'Sofa', 4, 58500.00, '2026-09-05'),
+          (3, 'Power Recliner Lounge Chair - Dark Cognac Leather', 'Recliner', 8, 31000.00, '2026-09-08'),
+          (4, 'Solid Sheesham 6-Seater Dining Table & Chairs Set', 'Dining Set', 3, 49000.00, '2026-08-28'),
+          (5, 'King Size Upholstered Platform Bed - Charcoal Grey', 'Bed', 5, 36500.00, '2026-09-03'),
+          (6, 'Mid-Century Teak Wood Coffee Table with Storage', 'Coffee Table', 11, 14200.00, '2026-09-09'),
+          (7, 'Nordic Accent Armchair - Mustard Bouclé', 'Accent Chair', 7, 18500.00, '2026-09-07')
+        ON CONFLICT (id) DO NOTHING;
+      `;
+      await sql`
+        INSERT INTO restock_history (item_id, quantity_added, cost_per_unit, restock_date, note)
+        VALUES 
+          (1, 6, 42000.00, '2026-09-01', 'Initial consignment batch from Heritage Furnishings (Inv #HF-8821)'),
+          (2, 4, 58500.00, '2026-09-05', 'Festive season stock from Urban Weave Studio'),
+          (3, 5, 29500.00, '2026-08-15', 'Initial stock from ComfortCraft Ltd'),
+          (3, 3, 31000.00, '2026-09-08', 'Restock batch #2 - ComfortCraft Ltd (Supplier price increased)'),
+          (4, 3, 49000.00, '2026-08-28', 'Direct shipment from Rajasthan Artisan Guild'),
+          (5, 5, 36500.00, '2026-09-03', 'SlumberCraft Beds consignment'),
+          (6, 11, 14200.00, '2026-09-09', 'Local artisan woodwork workshop delivery'),
+          (7, 7, 18500.00, '2026-09-07', 'Studio Nordic launch order')
+        ON CONFLICT DO NOTHING;
+      `;
+    }
+  } catch (err) {
+    console.error("Database initialization check warning:", err);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -1314,9 +1367,47 @@ export async function getTransitionalCreditReport(): Promise<TransitionalCreditR
 }
 
 // -----------------------------------------------------------------------------
-// Legacy Inventory Items & History Access
+// -----------------------------------------------------------------------------
+// Showroom Furniture Items & Append-Only Restock History Data Access
 // -----------------------------------------------------------------------------
 export async function getAllItems(search?: string, category?: string): Promise<InventoryItem[]> {
+  const sql = getSql();
+  if (sql) {
+    await ensureTablesExist();
+    const rows = (await sql`
+      SELECT 
+        id,
+        name,
+        category,
+        current_quantity,
+        current_cost_per_unit::float AS current_cost_per_unit,
+        (current_quantity * current_cost_per_unit)::float AS total_value,
+        TO_CHAR(last_restocked_at, 'YYYY-MM-DD') AS last_restocked_at,
+        created_at,
+        updated_at
+      FROM items
+      ORDER BY id ASC
+    `) as any[];
+
+    let items: InventoryItem[] = rows.map((r) => ({
+      ...r,
+      current_quantity: Number(r.current_quantity),
+      current_cost_per_unit: Number(r.current_cost_per_unit),
+      total_value: Number(r.total_value),
+    }));
+
+    if (category && category !== "All") {
+      items = items.filter((i) => i.category.toLowerCase() === category.toLowerCase());
+    }
+    if (search && search.trim() !== "") {
+      const q = search.toLowerCase().trim();
+      items = items.filter(
+        (i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q)
+      );
+    }
+    return items;
+  }
+
   let items = [...memoryStore.items];
   if (category && category !== "All") {
     items = items.filter((i) => i.category.toLowerCase() === category.toLowerCase());
@@ -1331,11 +1422,64 @@ export async function getAllItems(search?: string, category?: string): Promise<I
 }
 
 export async function getItemById(id: number): Promise<InventoryItem | null> {
+  const sql = getSql();
+  if (sql) {
+    await ensureTablesExist();
+    const rows = (await sql`
+      SELECT 
+        id,
+        name,
+        category,
+        current_quantity,
+        current_cost_per_unit::float AS current_cost_per_unit,
+        (current_quantity * current_cost_per_unit)::float AS total_value,
+        TO_CHAR(last_restocked_at, 'YYYY-MM-DD') AS last_restocked_at,
+        created_at,
+        updated_at
+      FROM items
+      WHERE id = ${id}
+      LIMIT 1
+    `) as any[];
+
+    if (!rows || rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      ...r,
+      current_quantity: Number(r.current_quantity),
+      current_cost_per_unit: Number(r.current_cost_per_unit),
+      total_value: Number(r.total_value),
+    };
+  }
+
   const item = memoryStore.items.find((i) => i.id === id);
   return item ? { ...item } : null;
 }
 
 export async function getItemRestockHistory(itemId: number): Promise<RestockHistoryEntry[]> {
+  const sql = getSql();
+  if (sql) {
+    await ensureTablesExist();
+    const rows = (await sql`
+      SELECT 
+        id,
+        item_id,
+        quantity_added,
+        cost_per_unit::float AS cost_per_unit,
+        TO_CHAR(restock_date, 'YYYY-MM-DD') AS restock_date,
+        note,
+        created_at
+      FROM restock_history
+      WHERE item_id = ${itemId}
+      ORDER BY restock_date DESC, id DESC
+    `) as any[];
+
+    return rows.map((r) => ({
+      ...r,
+      quantity_added: Number(r.quantity_added),
+      cost_per_unit: Number(r.cost_per_unit),
+    }));
+  }
+
   return memoryStore.history
     .filter((h) => h.item_id === itemId)
     .sort((a, b) => new Date(b.restock_date).getTime() - new Date(a.restock_date).getTime());
@@ -1346,8 +1490,51 @@ export async function createItem(input: AddItemInput): Promise<InventoryItem> {
   const initialCost = Math.max(0, Number(input.initial_cost_per_unit) || 0);
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
-  const newId = memoryStore.nextId.items++;
+  const sql = getSql();
 
+  if (sql) {
+    await ensureTablesExist();
+    const inserted = (await sql`
+      INSERT INTO items (name, category, current_quantity, current_cost_per_unit, last_restocked_at)
+      VALUES (${input.name.trim()}, ${input.category.trim()}, ${initialQty}, ${initialCost}, ${today})
+      RETURNING 
+        id,
+        name,
+        category,
+        current_quantity,
+        current_cost_per_unit::float AS current_cost_per_unit,
+        (current_quantity * current_cost_per_unit)::float AS total_value,
+        TO_CHAR(last_restocked_at, 'YYYY-MM-DD') AS last_restocked_at,
+        created_at,
+        updated_at
+    `) as any[];
+
+    const newItem = inserted[0];
+    if (initialQty > 0) {
+      const note = input.initial_note?.trim() || "Initial stock entry";
+      await sql`
+        INSERT INTO restock_history (item_id, quantity_added, cost_per_unit, restock_date, note)
+        VALUES (${newItem.id}, ${initialQty}, ${initialCost}, ${today}, ${note})
+      `;
+    }
+
+    // Also mirror to memoryStore
+    const itemRecord: InventoryItem = {
+      id: Number(newItem.id),
+      name: newItem.name,
+      category: newItem.category,
+      current_quantity: Number(newItem.current_quantity),
+      current_cost_per_unit: Number(newItem.current_cost_per_unit),
+      total_value: Number(newItem.total_value),
+      last_restocked_at: today,
+      created_at: now,
+      updated_at: now,
+    };
+    memoryStore.items.unshift(itemRecord);
+    return itemRecord;
+  }
+
+  const newId = memoryStore.nextId.items++;
   const newItem: InventoryItem = {
     id: newId,
     name: input.name.trim(),
@@ -1381,6 +1568,54 @@ export async function restockItem(itemId: number, input: RestockInput): Promise<
   const newCost = Math.max(0, Number(input.cost_per_unit) || 0);
   const restockDate = input.restock_date || new Date().toISOString().slice(0, 10);
   const note = input.note?.trim() || null;
+  const sql = getSql();
+
+  if (sql) {
+    await ensureTablesExist();
+    await sql`
+      INSERT INTO restock_history (item_id, quantity_added, cost_per_unit, restock_date, note)
+      VALUES (${itemId}, ${addedQty}, ${newCost}, ${restockDate}, ${note})
+    `;
+
+    const updated = (await sql`
+      UPDATE items
+      SET 
+        current_quantity = current_quantity + ${addedQty},
+        current_cost_per_unit = ${newCost},
+        last_restocked_at = ${restockDate},
+        updated_at = NOW()
+      WHERE id = ${itemId}
+      RETURNING 
+        id,
+        name,
+        category,
+        current_quantity,
+        current_cost_per_unit::float AS current_cost_per_unit,
+        (current_quantity * current_cost_per_unit)::float AS total_value,
+        TO_CHAR(last_restocked_at, 'YYYY-MM-DD') AS last_restocked_at,
+        created_at,
+        updated_at
+    `) as any[];
+
+    if (!updated || updated.length === 0) {
+      throw new Error(`Item with id ${itemId} not found`);
+    }
+
+    const r = updated[0];
+    const res: InventoryItem = {
+      ...r,
+      current_quantity: Number(r.current_quantity),
+      current_cost_per_unit: Number(r.current_cost_per_unit),
+      total_value: Number(r.total_value),
+    };
+
+    // Mirror to memory
+    const memIdx = memoryStore.items.findIndex((i) => i.id === itemId);
+    if (memIdx !== -1) {
+      memoryStore.items[memIdx] = res;
+    }
+    return res;
+  }
 
   const itemIndex = memoryStore.items.findIndex((i) => i.id === itemId);
   if (itemIndex === -1) {
@@ -1413,6 +1648,45 @@ export async function restockItem(itemId: number, input: RestockInput): Promise<
 }
 
 export async function updateItem(itemId: number, input: EditItemInput): Promise<InventoryItem> {
+  const sql = getSql();
+  if (sql) {
+    await ensureTablesExist();
+    const updated = (await sql`
+      UPDATE items
+      SET 
+        name = ${input.name.trim()},
+        category = ${input.category.trim()},
+        updated_at = NOW()
+      WHERE id = ${itemId}
+      RETURNING 
+        id,
+        name,
+        category,
+        current_quantity,
+        current_cost_per_unit::float AS current_cost_per_unit,
+        (current_quantity * current_cost_per_unit)::float AS total_value,
+        TO_CHAR(last_restocked_at, 'YYYY-MM-DD') AS last_restocked_at,
+        created_at,
+        updated_at
+    `) as any[];
+
+    if (!updated || updated.length === 0) {
+      throw new Error(`Item with id ${itemId} not found`);
+    }
+    const r = updated[0];
+    const res: InventoryItem = {
+      ...r,
+      current_quantity: Number(r.current_quantity),
+      current_cost_per_unit: Number(r.current_cost_per_unit),
+      total_value: Number(r.total_value),
+    };
+    const memIdx = memoryStore.items.findIndex((i) => i.id === itemId);
+    if (memIdx !== -1) {
+      memoryStore.items[memIdx] = res;
+    }
+    return res;
+  }
+
   const itemIndex = memoryStore.items.findIndex((i) => i.id === itemId);
   if (itemIndex === -1) {
     throw new Error(`Item with id ${itemId} not found`);
@@ -1427,6 +1701,15 @@ export async function updateItem(itemId: number, input: EditItemInput): Promise<
 }
 
 export async function deleteItem(itemId: number): Promise<boolean> {
+  const sql = getSql();
+  if (sql) {
+    await ensureTablesExist();
+    await sql`DELETE FROM items WHERE id = ${itemId}`;
+    memoryStore.items = memoryStore.items.filter((i) => i.id !== itemId);
+    memoryStore.history = memoryStore.history.filter((h) => h.item_id !== itemId);
+    return true;
+  }
+
   memoryStore.items = memoryStore.items.filter((i) => i.id !== itemId);
   memoryStore.history = memoryStore.history.filter((h) => h.item_id !== itemId);
   return true;
