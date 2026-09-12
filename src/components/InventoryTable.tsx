@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { History, RefreshCw, Pencil, Trash2, Calendar, AlertCircle } from "lucide-react";
 import { InventoryItem } from "@/lib/types";
 import { formatINR, formatDate } from "@/lib/formatters";
@@ -26,7 +25,7 @@ export function InventoryTable({
         <AlertCircle size={40} className="empty-icon" />
         <h3 className="empty-title">No furniture items found</h3>
         <p className="empty-desc">
-          Try adjusting your search or category filters, or click "Add New Furniture" above.
+          Try adjusting your search or category filters, or click &quot;Add New Furniture&quot; above.
         </p>
       </div>
     );
@@ -103,10 +102,10 @@ export function InventoryTable({
                 {/* 6. Actions */}
                 <td className="td-actions">
                   <div className="actions-wrapper">
-                    {/* Restock Button */}
+                    {/* Restock: the one primary action per row */}
                     <button
                       onClick={() => onRestockClick(item)}
-                      className="btn btn-restock btn-sm"
+                      className="btn btn-primary btn-sm"
                       title="Restock this item"
                       id={`btn-restock-${item.id}`}
                     >
@@ -114,37 +113,35 @@ export function InventoryTable({
                       <span>Restock</span>
                     </button>
 
-                    {/* View History Button */}
+                    {/* Secondary actions: neutral icon buttons */}
                     <button
                       onClick={() => onHistoryClick(item)}
-                      className="btn btn-history btn-sm"
+                      className="btn-row-icon"
                       title="View batch restock history"
+                      aria-label={`View history for ${item.name}`}
                       id={`btn-history-${item.id}`}
                     >
-                      <History size={14} />
-                      <span>History</span>
+                      <History size={15} />
                     </button>
 
-                    {/* Edit Item */}
                     <button
                       onClick={() => onEditClick(item)}
-                      className="btn btn-secondary btn-icon-only btn-sm"
+                      className="btn-row-icon"
                       title="Edit item name & category"
                       aria-label={`Edit ${item.name}`}
                       id={`btn-edit-${item.id}`}
                     >
-                      <Pencil size={14} />
+                      <Pencil size={15} />
                     </button>
 
-                    {/* Delete Item */}
                     <button
                       onClick={() => onDeleteClick(item)}
-                      className="btn btn-danger btn-icon-only btn-sm"
+                      className="btn-row-icon btn-row-icon-danger"
                       title="Delete item"
                       aria-label={`Delete ${item.name}`}
                       id={`btn-delete-${item.id}`}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </td>
@@ -172,7 +169,7 @@ export function InventoryTable({
         }
 
         thead {
-          background: rgba(255, 255, 255, 0.02);
+          background: var(--bg-surface-elevated);
           border-bottom: 1px solid var(--border-subtle);
         }
 
@@ -254,7 +251,7 @@ export function InventoryTable({
           font-family: var(--font-heading);
           font-weight: 700;
           font-size: 1.05rem;
-          color: #fbbf24;
+          color: var(--primary);
         }
 
         .sub-hint {
@@ -279,19 +276,7 @@ export function InventoryTable({
           display: flex;
           align-items: center;
           justify-content: flex-end;
-          gap: 0.5rem;
-        }
-
-        .btn-sm {
-          font-size: 0.8125rem;
-          padding: 0.45rem 0.85rem;
-          min-height: 36px;
-        }
-
-        .btn-icon-only.btn-sm {
-          width: 36px;
-          height: 36px;
-          padding: 0;
+          gap: 0.4rem;
         }
 
         /* Empty state */

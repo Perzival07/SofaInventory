@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Search, X, LayoutGrid, Table as TableIcon, ArrowUpDown } from "lucide-react";
 
 interface FilterBarProps {
@@ -169,8 +168,7 @@ export function FilterBar({
 
         .search-input:focus {
           border-color: var(--primary);
-          box-shadow: 0 0 0 3px var(--primary-glow);
-          background: var(--bg-surface-elevated);
+          box-shadow: 0 0 0 3px var(--border-focus);
         }
 
         .search-icon {
@@ -186,7 +184,7 @@ export function FilterBar({
           width: 28px;
           height: 28px;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.1);
+          background: var(--bg-surface-elevated);
           border: none;
           color: var(--text-secondary);
           display: flex;
@@ -196,7 +194,7 @@ export function FilterBar({
         }
 
         .clear-search-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
+          background: var(--bg-surface-hover);
           color: var(--text-primary);
         }
 
@@ -275,9 +273,8 @@ export function FilterBar({
         }
 
         .view-toggle-btn.active {
-          background: var(--bg-surface-hover);
+          background: var(--bg-surface-elevated);
           color: var(--primary);
-          box-shadow: var(--shadow-sm);
         }
 
         .view-toggle-btn:hover:not(.active) {
@@ -321,11 +318,10 @@ export function FilterBar({
         }
 
         .category-pill-active {
-          background: var(--primary-gradient);
+          background: var(--primary);
           color: var(--text-inverse);
-          border-color: transparent;
+          border-color: var(--primary);
           font-weight: 700;
-          box-shadow: 0 2px 10px var(--primary-glow);
         }
       `}</style>
     </div>

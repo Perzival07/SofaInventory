@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Package, IndianRupee, Layers, AlertTriangle } from "lucide-react";
 import { InventorySummary } from "@/lib/types";
 import { formatINR } from "@/lib/formatters";
@@ -118,12 +117,8 @@ export function StatsOverview({ summary }: StatsOverviewProps) {
         }
 
         .stat-card-highlight {
-          background: linear-gradient(
-            135deg,
-            rgba(245, 158, 11, 0.08) 0%,
-            rgba(18, 25, 38, 0.95) 100%
-          );
-          border-color: rgba(245, 158, 11, 0.25);
+          border-color: var(--primary-soft-border);
+          background: var(--primary-soft);
         }
 
         .stat-icon-wrapper {
@@ -137,33 +132,33 @@ export function StatsOverview({ summary }: StatsOverviewProps) {
         }
 
         .icon-units {
-          background: rgba(56, 189, 248, 0.12);
-          color: #38bdf8;
-          border: 1px solid rgba(56, 189, 248, 0.25);
+          background: var(--accent-blue-soft);
+          color: var(--accent-blue);
+          border: 1px solid #bae6fd;
         }
 
         .icon-valuation {
-          background: rgba(245, 158, 11, 0.15);
-          color: #fbbf24;
-          border: 1px solid rgba(245, 158, 11, 0.3);
+          background: #ffffff;
+          color: var(--primary);
+          border: 1px solid var(--primary-soft-border);
         }
 
         .icon-items {
-          background: rgba(168, 85, 247, 0.12);
-          color: #c084fc;
-          border: 1px solid rgba(168, 85, 247, 0.25);
+          background: var(--accent-purple-soft);
+          color: var(--accent-purple);
+          border: 1px solid #e9d5ff;
         }
 
         .icon-alert {
-          background: rgba(100, 116, 139, 0.12);
-          color: #94a3b8;
-          border: 1px solid rgba(100, 116, 139, 0.25);
+          background: var(--bg-surface-elevated);
+          color: var(--text-muted);
+          border: 1px solid var(--border-subtle);
         }
 
         .icon-alert-active {
-          background: rgba(239, 68, 68, 0.12);
-          color: #f87171;
-          border: 1px solid rgba(239, 68, 68, 0.3);
+          background: var(--status-out-stock-bg);
+          color: var(--status-out-stock-text);
+          border: 1px solid var(--status-out-stock-border);
           animation: pulseSubtle 2.5s infinite ease-in-out;
         }
 
@@ -194,13 +189,13 @@ export function StatsOverview({ summary }: StatsOverviewProps) {
         }
 
         .valuation-value {
-          color: #fbbf24;
+          color: var(--primary);
         }
 
         .stat-sub-count {
           font-size: 0.85rem;
           font-weight: 500;
-          color: #f87171;
+          color: var(--status-out-stock-text);
           margin-left: 0.25rem;
         }
 

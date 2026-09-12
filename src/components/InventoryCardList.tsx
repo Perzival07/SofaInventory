@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { RefreshCw, History, Pencil, Trash2, Calendar, AlertCircle } from "lucide-react";
 import { InventoryItem } from "@/lib/types";
 import { formatINR, formatDate } from "@/lib/formatters";
@@ -26,7 +25,7 @@ export function InventoryCardList({
         <AlertCircle size={40} className="empty-icon" />
         <h3 className="empty-title">No furniture items found</h3>
         <p className="empty-desc">
-          Try adjusting your search or category filters, or click "Add New Furniture" above.
+          Try adjusting your search or category filters, or click &quot;Add New Furniture&quot; above.
         </p>
       </div>
     );
@@ -107,7 +106,7 @@ export function InventoryCardList({
             <div className="card-actions-grid">
               <button
                 onClick={() => onRestockClick(item)}
-                className="btn btn-restock card-action-btn"
+                className="btn btn-primary card-action-btn"
                 id={`btn-card-restock-${item.id}`}
               >
                 <RefreshCw size={16} />
@@ -115,7 +114,7 @@ export function InventoryCardList({
               </button>
               <button
                 onClick={() => onHistoryClick(item)}
-                className="btn btn-history card-action-btn"
+                className="btn btn-secondary card-action-btn"
                 id={`btn-card-history-${item.id}`}
               >
                 <History size={16} />
@@ -183,8 +182,8 @@ export function InventoryCardList({
           width: 36px;
           height: 36px;
           border-radius: var(--radius-sm);
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid transparent;
+          background: transparent;
+          border: 1px solid var(--border-subtle);
           color: var(--text-secondary);
           display: flex;
           align-items: center;
@@ -194,15 +193,15 @@ export function InventoryCardList({
         }
 
         .btn-icon-subtle:hover {
-          background: var(--bg-surface-hover);
+          background: var(--bg-surface-elevated);
           color: var(--text-primary);
-          border-color: var(--border-subtle);
+          border-color: var(--border-hover);
         }
 
         .btn-icon-delete:hover {
-          background: rgba(239, 68, 68, 0.15);
-          color: #f87171;
-          border-color: rgba(239, 68, 68, 0.3);
+          background: var(--status-out-stock-bg);
+          color: var(--status-out-stock-text);
+          border-color: var(--status-out-stock-border);
         }
 
         .card-item-name {
@@ -216,7 +215,7 @@ export function InventoryCardList({
         }
 
         .card-stock-row {
-          background: rgba(255, 255, 255, 0.02);
+          background: var(--bg-surface-elevated);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-md);
           padding: 0.75rem 1rem;
@@ -264,8 +263,8 @@ export function InventoryCardList({
         }
 
         .financial-box-highlight {
-          background: rgba(245, 158, 11, 0.05);
-          border-color: rgba(245, 158, 11, 0.2);
+          background: var(--primary-soft);
+          border-color: var(--primary-soft-border);
         }
 
         .fin-label {
@@ -283,7 +282,7 @@ export function InventoryCardList({
         }
 
         .value-gold {
-          color: #fbbf24;
+          color: var(--primary);
           font-family: var(--font-heading);
           font-size: 1.05rem;
         }

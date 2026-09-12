@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, type SubmitEvent } from "react";
 import { X, RefreshCw, ArrowRight, PackagePlus } from "lucide-react";
 import { InventoryItem, RestockInput } from "@/lib/types";
 import { formatINR, getTodayDateString } from "@/lib/formatters";
@@ -19,17 +19,19 @@ export function RestockModal({ item, isOpen, onClose, onSubmit }: RestockModalPr
   const [note, setNote] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wasOpen, setWasOpen] = useState(false);
 
-  // Pre-fill fields when item changes
-  useEffect(() => {
-    if (item) {
+  // Reset fields at render time whenever the modal transitions from closed to open
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen && item) {
       setQuantityAdded(5);
       setCostPerUnit(item.current_cost_per_unit || 0);
       setRestockDate(getTodayDateString());
       setNote("");
       setError(null);
     }
-  }, [item]);
+  }
 
   if (!isOpen || !item) return null;
 
@@ -37,7 +39,7 @@ export function RestockModal({ item, isOpen, onClose, onSubmit }: RestockModalPr
   const totalBatchOutlay = (Number(quantityAdded) || 0) * (Number(costPerUnit) || 0);
   const newTotalItemValue = newTotalQuantity * (Number(costPerUnit) || 0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!quantityAdded || quantityAdded <= 0) {
       setError("Please enter a valid quantity of at least 1 unit.");
@@ -226,7 +228,7 @@ export function RestockModal({ item, isOpen, onClose, onSubmit }: RestockModalPr
           width: 36px;
           height: 36px;
           border-radius: var(--radius-sm);
-          background: rgba(255, 255, 255, 0.05);
+          background: transparent;
           border: none;
           color: var(--text-secondary);
           display: flex;
@@ -236,7 +238,7 @@ export function RestockModal({ item, isOpen, onClose, onSubmit }: RestockModalPr
         }
 
         .btn-icon-close:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: var(--bg-surface-elevated);
           color: var(--text-primary);
         }
 
@@ -251,7 +253,7 @@ export function RestockModal({ item, isOpen, onClose, onSubmit }: RestockModalPr
         }
 
         .item-summary-card {
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-surface-elevated);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-md);
           padding: 1rem;
@@ -319,8 +321,8 @@ export function RestockModal({ item, isOpen, onClose, onSubmit }: RestockModalPr
         }
 
         .calculation-preview {
-          background: rgba(245, 158, 11, 0.05);
-          border: 1px solid rgba(245, 158, 11, 0.25);
+          background: var(--primary-soft);
+          border: 1px solid var(--primary-soft-border);
           border-radius: var(--radius-md);
           padding: 1rem;
           display: flex;
@@ -337,7 +339,7 @@ export function RestockModal({ item, isOpen, onClose, onSubmit }: RestockModalPr
         }
 
         .calc-row-highlight {
-          border-top: 1px solid rgba(245, 158, 11, 0.15);
+          border-top: 1px solid var(--primary-soft-border);
           padding-top: 0.65rem;
           font-size: 0.95rem;
           font-weight: 600;
@@ -370,7 +372,7 @@ export function RestockModal({ item, isOpen, onClose, onSubmit }: RestockModalPr
 
         .value-gold {
           font-family: var(--font-heading);
-          color: #fbbf24;
+          color: var(--primary);
           font-size: 1.15rem;
         }
       `}</style>

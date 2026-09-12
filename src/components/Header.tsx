@@ -1,59 +1,129 @@
 "use client";
 
 import React from "react";
-import { Armchair, Plus, Database, Sparkles } from "lucide-react";
+import { Armchair, Plus, Database, Settings, ShieldAlert, ShieldCheck, Menu } from "lucide-react";
+import { LanguageCode, TaxConfig } from "@/lib/types";
+import { LanguageToggle } from "./LanguageToggle";
+import { t } from "@/lib/i18n";
 
-interface HeaderProps {
-  onAddItemClick: () => void;
-  dbStatus: { connected: boolean; provider: string };
+export interface HeaderProps {
+  onAddItemClick?: () => void;
+  onOpenTaxSettings?: () => void;
+  dbStatus?: { connected: boolean; provider: string };
+  taxConfig?: TaxConfig;
+  lang?: LanguageCode;
+  onLangChange?: (lang: LanguageCode) => void;
+  title?: string;
+  subtitle?: string;
+  actionLabel?: string;
+  onActionClick?: () => void;
+  onMenuClick?: () => void;
 }
 
-export function Header({ onAddItemClick, dbStatus }: HeaderProps) {
+export function Header({
+  onAddItemClick,
+  onOpenTaxSettings,
+  dbStatus = { connected: true, provider: "Local / Postgres" },
+  taxConfig,
+  lang = "en",
+  onLangChange,
+  title,
+  subtitle,
+  actionLabel,
+  onActionClick,
+  onMenuClick,
+}: HeaderProps) {
+  const isTaxEnabled = taxConfig ? taxConfig.tax_regime_enabled : false;
+
   return (
     <header className="header-root">
       <div className="header-brand">
+        {onMenuClick && (
+          <button
+            className="mobile-menu-btn"
+            onClick={onMenuClick}
+            aria-label="Toggle navigation"
+          >
+            <Menu size={22} />
+          </button>
+        )}
         <div className="header-logo-icon">
           <Armchair size={26} strokeWidth={2.2} />
         </div>
         <div>
           <div className="header-title-row">
-            <h1 className="header-title">The Sofa Studio</h1>
-            <span className="badge badge-shop">Furniture Co.</span>
+            <h1 className="header-title">{title || t("app_title", lang)}</h1>
+            <span className="badge badge-shop">Barasat, WB</span>
           </div>
-          <p className="header-subtitle">
-            Real-time Inventory & Batch Restocking System
-          </p>
+          <p className="header-subtitle">{subtitle || t("app_tagline", lang)}</p>
         </div>
       </div>
 
       <div className="header-actions">
-        {/* DB Connection Indicator */}
+        {/* Language Switcher if onLangChange provided */}
+        {onLangChange && (
+          <LanguageToggle currentLang={lang} onToggle={onLangChange} />
+        )}
+
+        {/* Tax Regime Indicator */}
+        {onOpenTaxSettings && (
+          <button
+            onClick={onOpenTaxSettings}
+            className={`regime-indicator-btn ${
+              isTaxEnabled ? "regime-btn-gst" : "regime-btn-unregistered"
+            }`}
+            title="Click to configure GST Regime & Section 18(1)(a) Transitional Credit"
+          >
+            {isTaxEnabled ? (
+              <>
+                <ShieldCheck size={14} className="icon-gst" />
+                <span>GST Registered</span>
+              </>
+            ) : (
+              <>
+                <ShieldAlert size={14} className="icon-unreg" />
+                <span>Unregistered (Cash Memo)</span>
+              </>
+            )}
+            <Settings size={12} className="icon-settings" />
+          </button>
+        )}
+
+        {/* Database Status */}
         <div
           className={`db-indicator ${
             dbStatus.connected ? "db-connected" : "db-demo"
           }`}
-          title={
-            dbStatus.connected
-              ? "Connected to Vercel Postgres (Neon)"
-              : "Running in demo mode. Set POSTGRES_URL to persist to Vercel Postgres."
-          }
+          title={dbStatus.provider}
         >
-          <Database size={14} />
+          <Database size={13} />
           <span className="db-dot" />
           <span className="db-text">
-            {dbStatus.connected ? "Vercel Postgres" : "In-Memory Demo"}
+            {dbStatus.connected ? "Postgres" : "Demo Store"}
           </span>
         </div>
 
-        {/* Primary Add Item CTA */}
-        <button
-          onClick={onAddItemClick}
-          className="btn btn-primary btn-add-item"
-          id="btn-add-item-header"
-        >
-          <Plus size={18} strokeWidth={2.5} />
-          <span>Add New Furniture</span>
-        </button>
+        {/* Action Label or Add Item Primary CTA */}
+        {actionLabel && onActionClick && (
+          <button
+            onClick={onActionClick}
+            className="btn btn-primary btn-add-item"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+            <span>{actionLabel}</span>
+          </button>
+        )}
+
+        {!actionLabel && onAddItemClick && (
+          <button
+            onClick={onAddItemClick}
+            className="btn btn-primary btn-add-item"
+            id="btn-add-item-header"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+            <span>{t("add_item", lang)}</span>
+          </button>
+        )}
       </div>
 
       <style jsx>{`
@@ -61,12 +131,12 @@ export function Header({ onAddItemClick, dbStatus }: HeaderProps) {
           display: flex;
           flex-direction: column;
           gap: 1.25rem;
-          padding-bottom: 1.75rem;
+          padding-bottom: 1.5rem;
           margin-bottom: 1.5rem;
           border-bottom: 1px solid var(--border-subtle);
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 860px) {
           .header-root {
             flex-direction: row;
             align-items: center;
@@ -84,7 +154,11 @@ export function Header({ onAddItemClick, dbStatus }: HeaderProps) {
           width: 52px;
           height: 52px;
           min-width: 52px;
-          background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(245, 158, 11, 0.2) 0%,
+            rgba(217, 119, 6, 0.1) 100%
+          );
           border: 1px solid rgba(245, 158, 11, 0.35);
           border-radius: var(--radius-lg);
           display: flex;
@@ -102,16 +176,16 @@ export function Header({ onAddItemClick, dbStatus }: HeaderProps) {
         }
 
         .header-title {
-          font-size: 1.65rem;
+          font-size: 1.55rem;
           line-height: 1.2;
           background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 860px) {
           .header-title {
-            font-size: 1.9rem;
+            font-size: 1.75rem;
           }
         }
 
@@ -125,36 +199,62 @@ export function Header({ onAddItemClick, dbStatus }: HeaderProps) {
 
         .header-subtitle {
           color: var(--text-secondary);
-          font-size: 0.875rem;
+          font-size: 0.85rem;
           margin-top: 0.2rem;
         }
 
         .header-actions {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.65rem;
           flex-wrap: wrap;
         }
 
-        @media (max-width: 600px) {
-          .header-actions {
-            width: 100%;
-            justify-content: space-between;
-          }
-          .btn-add-item {
-            flex: 1;
-          }
+        .regime-indicator-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          padding: 0.45rem 0.75rem;
+          border-radius: var(--radius-md);
+          font-size: 0.775rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .regime-btn-unregistered {
+          background: rgba(245, 158, 11, 0.1);
+          color: #fbbf24;
+          border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .regime-btn-unregistered:hover {
+          background: rgba(245, 158, 11, 0.2);
+        }
+
+        .regime-btn-gst {
+          background: rgba(56, 189, 248, 0.12);
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .regime-btn-gst:hover {
+          background: rgba(56, 189, 248, 0.25);
+        }
+
+        .icon-settings {
+          opacity: 0.7;
+          margin-left: 0.2rem;
         }
 
         .db-indicator {
           display: inline-flex;
           align-items: center;
           gap: 0.45rem;
-          padding: 0.45rem 0.8rem;
+          padding: 0.45rem 0.75rem;
           border-radius: var(--radius-full);
-          font-size: 0.785rem;
+          font-size: 0.775rem;
           font-weight: 500;
-          letter-spacing: 0.01em;
         }
 
         .db-connected {
@@ -164,18 +264,16 @@ export function Header({ onAddItemClick, dbStatus }: HeaderProps) {
         }
 
         .db-demo {
-          background: rgba(245, 158, 11, 0.1);
-          color: #fbbf24;
-          border: 1px solid rgba(245, 158, 11, 0.25);
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--text-secondary);
+          border: 1px solid var(--border-subtle);
         }
 
         .db-dot {
-          width: 7px;
-          height: 7px;
+          width: 6px;
+          height: 6px;
           border-radius: 50%;
           background: currentColor;
-          box-shadow: 0 0 8px currentColor;
-          animation: pulseSubtle 2s infinite ease-in-out;
         }
       `}</style>
     </header>

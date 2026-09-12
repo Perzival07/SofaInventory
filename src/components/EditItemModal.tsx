@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, type SubmitEvent } from "react";
 import { X, Pencil } from "lucide-react";
 import { InventoryItem, EditItemInput, COMMON_CATEGORIES } from "@/lib/types";
 
@@ -17,9 +17,12 @@ export function EditItemModal({ item, isOpen, onClose, onSubmit }: EditItemModal
   const [customCategory, setCustomCategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wasOpen, setWasOpen] = useState(false);
 
-  useEffect(() => {
-    if (item) {
+  // Reset fields at render time whenever the modal transitions from closed to open
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen && item) {
       setName(item.name);
       const isKnown = (COMMON_CATEGORIES as readonly string[]).includes(item.category);
       if (isKnown && item.category !== "All") {
@@ -31,13 +34,13 @@ export function EditItemModal({ item, isOpen, onClose, onSubmit }: EditItemModal
       }
       setError(null);
     }
-  }, [item]);
+  }
 
   if (!isOpen || !item) return null;
 
   const resolvedCategory = category === "Other" ? customCategory.trim() : category;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim()) {
       setError("Item name cannot be empty.");
@@ -173,7 +176,7 @@ export function EditItemModal({ item, isOpen, onClose, onSubmit }: EditItemModal
           width: 36px;
           height: 36px;
           border-radius: var(--radius-sm);
-          background: rgba(255, 255, 255, 0.05);
+          background: transparent;
           border: none;
           color: var(--text-secondary);
           display: flex;
@@ -183,7 +186,7 @@ export function EditItemModal({ item, isOpen, onClose, onSubmit }: EditItemModal
         }
 
         .btn-icon-close:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: var(--bg-surface-elevated);
           color: var(--text-primary);
         }
 
@@ -198,7 +201,7 @@ export function EditItemModal({ item, isOpen, onClose, onSubmit }: EditItemModal
         }
 
         .edit-info-box {
-          background: rgba(255, 255, 255, 0.02);
+          background: var(--bg-surface-elevated);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-md);
           padding: 0.75rem 1rem;

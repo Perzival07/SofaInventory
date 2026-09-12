@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, Plus, Sparkles } from "lucide-react";
+import { useState, type SubmitEvent } from "react";
+import { X, Plus } from "lucide-react";
 import { AddItemInput, COMMON_CATEGORIES } from "@/lib/types";
 import { formatINR } from "@/lib/formatters";
 
@@ -26,7 +26,7 @@ export function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModalProps) {
   const resolvedCategory = category === "Other" ? customCategory.trim() : category;
   const estimatedInitialValue = (Number(initialQuantity) || 0) * (Number(initialCost) || 0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim()) {
       setError("Please enter the furniture item name.");
@@ -195,7 +195,7 @@ export function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModalProps) {
                 onChange={(e) => setInitialNote(e.target.value)}
               />
               <span className="form-hint">
-                This will be automatically recorded in the item's restock history audit log.
+                This will be automatically recorded in the item&apos;s restock history audit log.
               </span>
             </div>
           </div>
@@ -230,7 +230,7 @@ export function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModalProps) {
           width: 36px;
           height: 36px;
           border-radius: var(--radius-sm);
-          background: rgba(255, 255, 255, 0.05);
+          background: transparent;
           border: none;
           color: var(--text-secondary);
           display: flex;
@@ -240,7 +240,7 @@ export function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModalProps) {
         }
 
         .btn-icon-close:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: var(--bg-surface-elevated);
           color: var(--text-primary);
         }
 
@@ -267,8 +267,8 @@ export function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModalProps) {
         }
 
         .preview-box {
-          background: rgba(245, 158, 11, 0.06);
-          border: 1px solid rgba(245, 158, 11, 0.2);
+          background: var(--primary-soft);
+          border: 1px solid var(--primary-soft-border);
           border-radius: var(--radius-md);
           padding: 0.75rem 1rem;
           display: flex;
@@ -287,7 +287,7 @@ export function AddItemModal({ isOpen, onClose, onSubmit }: AddItemModalProps) {
           font-family: var(--font-heading);
           font-size: 1.15rem;
           font-weight: 700;
-          color: #fbbf24;
+          color: var(--primary);
         }
       `}</style>
     </div>

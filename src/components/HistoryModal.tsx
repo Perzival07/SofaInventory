@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { X, History, Calendar, IndianRupee, Layers, FileText, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, History, Calendar, FileText, Loader2 } from "lucide-react";
 import { InventoryItem, RestockHistoryEntry } from "@/lib/types";
 import { formatINR, formatDate } from "@/lib/formatters";
 import { fetchItemHistoryAction } from "@/app/actions";
@@ -19,6 +19,7 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
 
   useEffect(() => {
     if (isOpen && item) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state for an async fetch triggered by this effect
       setIsLoading(true);
       setError(null);
       fetchItemHistoryAction(item.id)
@@ -171,7 +172,7 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
         }
 
         .modal-title-icon {
-          color: #38bdf8;
+          color: var(--accent-blue);
         }
 
         .history-header-title {
@@ -190,7 +191,7 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
           width: 36px;
           height: 36px;
           border-radius: var(--radius-sm);
-          background: rgba(255, 255, 255, 0.05);
+          background: transparent;
           border: none;
           color: var(--text-secondary);
           display: flex;
@@ -200,7 +201,7 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
         }
 
         .btn-icon-close:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: var(--bg-surface-elevated);
           color: var(--text-primary);
         }
 
@@ -212,7 +213,7 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 0.75rem;
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-surface-elevated);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-md);
           padding: 0.85rem 1rem;
@@ -248,7 +249,7 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
           font-family: var(--font-heading);
           font-size: 1.05rem;
           font-weight: 700;
-          color: #fbbf24;
+          color: var(--primary);
         }
 
         .history-loading {
@@ -307,27 +308,26 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
           height: 14px;
           border-radius: 50%;
           background: var(--bg-surface);
-          border: 3px solid #38bdf8;
+          border: 3px solid var(--accent-blue);
           margin-top: 0.25rem;
           flex-shrink: 0;
           z-index: 2;
         }
 
         .timeline-node-latest {
-          border-color: #f59e0b;
-          box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+          border-color: var(--primary);
         }
 
         .timeline-line {
           width: 2px;
-          background: rgba(255, 255, 255, 0.1);
+          background: var(--border-subtle);
           flex: 1;
           margin: 0.25rem 0;
         }
 
         .timeline-card {
           flex: 1;
-          background: var(--bg-surface-elevated);
+          background: var(--bg-surface);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-md);
           padding: 0.9rem 1.1rem;
@@ -336,12 +336,8 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
         }
 
         .timeline-card-latest {
-          border-color: rgba(245, 158, 11, 0.35);
-          background: linear-gradient(
-            135deg,
-            rgba(245, 158, 11, 0.05) 0%,
-            var(--bg-surface-elevated) 100%
-          );
+          border-color: var(--primary-soft-border);
+          background: var(--primary-soft);
         }
 
         .timeline-top {
@@ -371,9 +367,9 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
         }
 
         .badge-latest {
-          background: rgba(245, 158, 11, 0.15);
-          color: #fbbf24;
-          border: 1px solid rgba(245, 158, 11, 0.3);
+          background: var(--primary-soft);
+          color: var(--primary);
+          border: 1px solid var(--primary-soft-border);
           font-size: 0.65rem;
           font-weight: 700;
           padding: 0.1rem 0.45rem;
@@ -396,7 +392,7 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
           font-family: var(--font-heading);
           font-weight: 700;
           font-size: 0.95rem;
-          color: #fbbf24;
+          color: var(--primary);
         }
 
         .timeline-metrics {
@@ -424,14 +420,14 @@ export function HistoryModal({ item, isOpen, onClose }: HistoryModalProps) {
         }
 
         .metric-qty {
-          color: #34d399;
+          color: var(--status-in-stock-text);
         }
 
         .timeline-note {
           display: flex;
           align-items: flex-start;
           gap: 0.45rem;
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-surface-elevated);
           padding: 0.5rem 0.75rem;
           border-radius: var(--radius-sm);
           font-size: 0.825rem;

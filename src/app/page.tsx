@@ -1,313 +1,370 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useTransition } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/Header";
-import { StatsOverview } from "@/components/StatsOverview";
-import { FilterBar } from "@/components/FilterBar";
-import { InventoryTable } from "@/components/InventoryTable";
-import { InventoryCardList } from "@/components/InventoryCardList";
-import { AddItemModal } from "@/components/AddItemModal";
-import { RestockModal } from "@/components/RestockModal";
-import { HistoryModal } from "@/components/HistoryModal";
-import { EditItemModal } from "@/components/EditItemModal";
-import { DeleteItemModal } from "@/components/DeleteItemModal";
-import {
-  InventoryItem,
-  InventorySummary,
-  AddItemInput,
-  RestockInput,
-  EditItemInput,
-} from "@/lib/types";
-import {
-  fetchInventoryAction,
-  getDbStatus,
-  addItemAction,
-  restockItemAction,
-  editItemAction,
-  deleteItemAction,
-} from "@/app/actions";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { MonsoonModeBanner } from "@/components/MonsoonModeBanner";
+import { TurnoverWatchdogCard } from "@/components/TurnoverWatchdogCard";
+import { FourStockStatesOverview } from "@/components/FourStockStatesOverview";
+import { RawMaterialStoreView } from "@/components/RawMaterialStoreView";
+import { ProductionStageTracker } from "@/components/ProductionStageTracker";
+import { JobWorkVendorManager } from "@/components/JobWorkVendorManager";
+import { RetailSalesAndKhata } from "@/components/RetailSalesAndKhata";
+import { TaxRegimeSettingsModal } from "@/components/TaxRegimeSettingsModal";
 
-export default function InventoryDashboard() {
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [summary, setSummary] = useState<InventorySummary>({
-    totalItems: 0,
-    totalStockUnits: 0,
-    totalInventoryValue: 0,
-    lowStockCount: 0,
-    outOfStockCount: 0,
-    categories: [],
+import {
+  RawMaterialItem,
+  WorkOrder,
+  JobWorkOrder,
+  JobWorkVendor,
+  FinishedGoodItem,
+  SalesOrder,
+  KhataAccount,
+  DeliveryZone,
+  TaxConfig,
+  FourStockStatesReconciliation,
+  TurnoverWatchdogStatus,
+  MonsoonModeConfig,
+  LanguageCode,
+} from "@/lib/types";
+
+import {
+  fetchEnterpriseOverviewAction,
+  fetchRawMaterialsAction,
+  fetchProductionWipAction,
+  fetchJobWorkAction,
+  fetchRetailAndKhataAction,
+} from "@/app/actions";
+
+import {
+  ShoppingCart,
+  Factory,
+  UserCheck,
+  Trees,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { t } from "@/lib/i18n";
+
+export default function EnterpriseDashboard() {
+  const [lang, setLang] = useState<LanguageCode>("en");
+  const [activeTab, setActiveTab] = useState<"retail" | "production" | "job_work" | "raw_material">("retail");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Enterprise State
+  const [fourStates, setFourStates] = useState<FourStockStatesReconciliation>({
+    raw_material_store_value: 0,
+    raw_material_items_count: 0,
+    in_house_wip_value: 0,
+    in_house_wip_units_count: 0,
+    stock_with_vendor_value: 0,
+    stock_with_vendor_items_count: 0,
+    finished_goods_value: 0,
+    finished_goods_units_count: 0,
+    total_enterprise_inventory_valuation: 0,
   });
+
+  const [turnoverStatus, setTurnoverStatus] = useState<TurnoverWatchdogStatus>({
+    fy_label: "FY 2026-27",
+    shop_turnover: 0,
+    other_pan_businesses_turnover: 0,
+    aggregate_pan_turnover: 0,
+    threshold_limit: 4000000,
+    amber_alert_level: 3000000,
+    red_alert_level: 3500000,
+    blocking_alert_level: 3800000,
+    status: "SAFE",
+    projected_yearend_turnover: 0,
+    festival_season_uplift_pct: 45,
+    registration_triggers: {
+      interstate_supply_attempted: false,
+      ecommerce_order_detected: false,
+      unbundled_services_billed: false,
+    },
+  });
+
+  const [taxConfig, setTaxConfig] = useState<TaxConfig>({
+    tax_regime_enabled: false,
+    registration_number: null,
+    registration_date: null,
+    deregistration_date: null,
+    state_code: "19",
+    state_name: "West Bengal",
+    composition_scheme: false,
+    filing_frequency: "monthly",
+    legal_name: "The Sofa Studio & Furniture Co.",
+    trade_name: "The Sofa Studio",
+    principal_place_of_business: "Barasat, North 24 Parganas, West Bengal - 700124",
+  });
+
+  const [monsoonConfig, setMonsoonConfig] = useState<MonsoonModeConfig>({
+    is_active: false,
+    humidity_pct: 65,
+    timber_moisture_max_threshold: 12.0,
+    polish_curing_extra_hours: 0,
+    adhesive_curing_extra_hours: 0,
+  });
+
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; provider: string }>({
     connected: false,
-    provider: "Checking...",
+    provider: "In-Memory Demo Store",
   });
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("recent");
-  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  // Module Specific Datasets
+  const [rawMaterials, setRawMaterials] = useState<RawMaterialItem[]>([]);
+  const [offcuts, setOffcuts] = useState<any[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [karigars, setKarigars] = useState<any[]>([]);
+  const [stageLogs, setStageLogs] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<JobWorkVendor[]>([]);
+  const [jobWorkOrders, setJobWorkOrders] = useState<JobWorkOrder[]>([]);
+  const [finishedGoods, setFinishedGoods] = useState<FinishedGoodItem[]>([]);
+  const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
+  const [khataAccounts, setKhataAccounts] = useState<KhataAccount[]>([]);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
 
-  // Modal States
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [restockItemTarget, setRestockItemTarget] = useState<InventoryItem | null>(null);
-  const [historyItemTarget, setHistoryItemTarget] = useState<InventoryItem | null>(null);
-  const [editItemTarget, setEditItemTarget] = useState<InventoryItem | null>(null);
-  const [deleteItemTarget, setDeleteItemTarget] = useState<InventoryItem | null>(null);
-
-  // Toast Notification State
+  // Modals
+  const [isTaxSettingsOpen, setIsTaxSettingsOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
+    setTimeout(() => setToast(null), 4000);
   };
 
-  // Load Inventory Data
-  const loadInventory = async () => {
+  // Load All Enterprise Data
+  const loadAllData = async () => {
     try {
-      const [invData, dbData] = await Promise.all([
-        fetchInventoryAction(search, selectedCategory),
-        getDbStatus(),
+      const [overview, rmData, prodData, jwData, retailData] = await Promise.all([
+        fetchEnterpriseOverviewAction(),
+        fetchRawMaterialsAction(),
+        fetchProductionWipAction(),
+        fetchJobWorkAction(),
+        fetchRetailAndKhataAction(),
       ]);
-      setItems(invData.items);
-      setSummary(invData.summary);
-      setDbStatus(dbData);
-    } catch (error) {
-      console.error("Failed to load inventory:", error);
-      showToast("Error loading inventory data", "error");
+
+      setFourStates(overview.fourStates);
+      setTurnoverStatus(overview.turnoverStatus);
+      setTaxConfig(overview.taxConfig);
+      setMonsoonConfig(overview.monsoonConfig);
+      setDbStatus({
+        connected: overview.isDbConfigured,
+        provider: overview.isDbConfigured
+          ? "Vercel Postgres (Neon)"
+          : "In-Memory Enterprise Store",
+      });
+
+      setRawMaterials(rmData.materials);
+      setOffcuts(rmData.offcuts);
+
+      setWorkOrders(prodData.workOrders);
+      setKarigars(prodData.karigars);
+      setStageLogs(prodData.stageLogs);
+
+      setVendors(jwData.vendors);
+      setJobWorkOrders(jwData.jobWorkOrders);
+
+      setFinishedGoods(retailData.finishedGoods);
+      setSalesOrders(retailData.salesOrders);
+      setKhataAccounts(retailData.khataAccounts);
+      setDeliveryZones(retailData.deliveryZones);
+    } catch (err) {
+      console.error("Failed to load enterprise data:", err);
+      showToast("Error loading enterprise dataset", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadInventory();
-  }, [search, selectedCategory]);
-
-  // Auto-adapt default viewMode based on screen size on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (window.innerWidth < 1024) {
-        setViewMode("cards");
-      } else {
-        setViewMode("table");
-      }
-    }
+    loadAllData();
   }, []);
-
-  // Client-side sorting for responsive instant feedback
-  const sortedItems = useMemo(() => {
-    const list = [...items];
-    switch (sortBy) {
-      case "stock-asc":
-        return list.sort((a, b) => a.current_quantity - b.current_quantity);
-      case "stock-desc":
-        return list.sort((a, b) => b.current_quantity - a.current_quantity);
-      case "value-desc":
-        return list.sort((a, b) => b.total_value - a.total_value);
-      case "name-asc":
-        return list.sort((a, b) => a.name.localeCompare(b.name));
-      case "recent":
-      default:
-        return list.sort(
-          (a, b) =>
-            new Date(b.last_restocked_at).getTime() - new Date(a.last_restocked_at).getTime()
-        );
-    }
-  }, [items, sortBy]);
-
-  // Handlers for Modals & Actions
-  const handleAddItem = async (input: AddItemInput) => {
-    const res = await addItemAction(input);
-    if (!res.success) {
-      throw new Error(res.error || "Failed to add item");
-    }
-    showToast(`Added "${input.name}" to inventory!`);
-    await loadInventory();
-  };
-
-  const handleRestockItem = async (itemId: number, input: RestockInput) => {
-    const res = await restockItemAction(itemId, input);
-    if (!res.success) {
-      throw new Error(res.error || "Failed to restock item");
-    }
-    showToast(`Restocked +${input.quantity_added} units successfully!`);
-    await loadInventory();
-  };
-
-  const handleEditItem = async (itemId: number, input: EditItemInput) => {
-    const res = await editItemAction(itemId, input);
-    if (!res.success) {
-      throw new Error(res.error || "Failed to update item");
-    }
-    showToast(`Updated "${input.name}" details.`);
-    await loadInventory();
-  };
-
-  const handleDeleteItem = async (itemId: number) => {
-    const res = await deleteItemAction(itemId);
-    if (!res.success) {
-      throw new Error(res.error || "Failed to delete item");
-    }
-    showToast("Furniture item deleted from inventory.");
-    await loadInventory();
-  };
 
   return (
     <main className="app-container">
-      {/* 1. Header with Brand, DB Status, and Add Item CTA */}
+      {/* 1. Header with Barasat Branding, Tax Status, Language Switcher */}
       <Header
-        onAddItemClick={() => setIsAddOpen(true)}
+        onOpenTaxSettings={() => setIsTaxSettingsOpen(true)}
         dbStatus={dbStatus}
+        taxConfig={taxConfig}
+        lang={lang}
+        onLangChange={setLang}
       />
 
-      {/* 2. Top-level KPI Metrics */}
-      <StatsOverview summary={summary} />
-
-      {/* 3. Search, Category Pills, Sorting, and View Switcher */}
-      <FilterBar
-        search={search}
-        onSearchChange={setSearch}
-        selectedCategory={selectedCategory}
-        onCategorySelect={setSelectedCategory}
-        availableCategories={summary.categories}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
+      {/* 2. Monsoon Mode Warning Banner (Kolkata humidity controls) */}
+      <MonsoonModeBanner
+        config={monsoonConfig}
+        lang={lang}
+        onUpdated={loadAllData}
       />
 
-      {/* 4. Main Inventory Listing (Table or Card View) */}
-      <section className="inventory-section" aria-label="Furniture Items List">
-        <div className="section-header-row">
-          <h2 className="section-title">
-            <span>Furniture Inventory</span>
-            <span className="section-count-badge">
-              {sortedItems.length} {sortedItems.length === 1 ? "Item" : "Items"}
-            </span>
-          </h2>
-          <p className="section-subtitle">
-            Showing latest batch restock costs and live valuation
-          </p>
+      {/* 3. Turnover Watchdog & Registration Trigger Alert (Section 3) */}
+      <TurnoverWatchdogCard
+        status={turnoverStatus}
+        lang={lang}
+        onTurnoverUpdated={loadAllData}
+        onOpenTaxSettings={() => setIsTaxSettingsOpen(true)}
+        taxEnabled={taxConfig.tax_regime_enabled}
+      />
+
+      {/* 4. Four Stock States Reconciliation Visualizer (Section 1) */}
+      <FourStockStatesOverview
+        reconciliation={fourStates}
+        lang={lang}
+        onSelectTab={setActiveTab}
+      />
+
+      {/* 5. Enterprise Main Navigation Tabs */}
+      <nav className="enterprise-nav-tabs" role="tablist" aria-label="Main ERP Modules">
+        <button
+          className={`nav-tab-btn ${activeTab === "retail" ? "active" : ""}`}
+          onClick={() => setActiveTab("retail")}
+          role="tab"
+          aria-selected={activeTab === "retail"}
+        >
+          <ShoppingCart size={18} />
+          <span>{t("tab_retail", lang)}</span>
+        </button>
+
+        <button
+          className={`nav-tab-btn ${activeTab === "production" ? "active" : ""}`}
+          onClick={() => setActiveTab("production")}
+          role="tab"
+          aria-selected={activeTab === "production"}
+        >
+          <Factory size={18} />
+          <span>{t("tab_production", lang)}</span>
+        </button>
+
+        <button
+          className={`nav-tab-btn ${activeTab === "job_work" ? "active" : ""}`}
+          onClick={() => setActiveTab("job_work")}
+          role="tab"
+          aria-selected={activeTab === "job_work"}
+        >
+          <UserCheck size={18} />
+          <span>{t("tab_job_work", lang)}</span>
+        </button>
+
+        <button
+          className={`nav-tab-btn ${activeTab === "raw_material" ? "active" : ""}`}
+          onClick={() => setActiveTab("raw_material")}
+          role="tab"
+          aria-selected={activeTab === "raw_material"}
+        >
+          <Trees size={18} />
+          <span>{t("tab_raw_material", lang)}</span>
+        </button>
+      </nav>
+
+      {/* 6. Active Module Content */}
+      {isLoading ? (
+        <div className="main-loading-state">
+          <Loader2 size={36} className="main-spinner" />
+          <p>Loading enterprise inventory states...</p>
         </div>
+      ) : activeTab === "retail" ? (
+        <RetailSalesAndKhata
+          finishedGoods={finishedGoods}
+          salesOrders={salesOrders}
+          khataAccounts={khataAccounts}
+          deliveryZones={deliveryZones}
+          lang={lang}
+          onRefresh={loadAllData}
+          taxEnabled={taxConfig.tax_regime_enabled}
+        />
+      ) : activeTab === "production" ? (
+        <ProductionStageTracker
+          workOrders={workOrders}
+          karigars={karigars}
+          stageLogs={stageLogs}
+          lang={lang}
+          onRefresh={loadAllData}
+        />
+      ) : activeTab === "job_work" ? (
+        <JobWorkVendorManager
+          vendors={vendors}
+          jobWorkOrders={jobWorkOrders}
+          lang={lang}
+          onRefresh={loadAllData}
+          taxEnabled={taxConfig.tax_regime_enabled}
+        />
+      ) : (
+        <RawMaterialStoreView
+          materials={rawMaterials}
+          offcuts={offcuts}
+          lang={lang}
+          onRefresh={loadAllData}
+          monsoonActive={monsoonConfig.is_active}
+        />
+      )}
 
-        {isLoading ? (
-          <div className="main-loading-state">
-            <Loader2 size={36} className="main-spinner" />
-            <p>Loading furniture stock...</p>
-          </div>
-        ) : viewMode === "table" ? (
-          <div className="desktop-table-container">
-            <InventoryTable
-              items={sortedItems}
-              onRestockClick={(item) => setRestockItemTarget(item)}
-              onHistoryClick={(item) => setHistoryItemTarget(item)}
-              onEditClick={(item) => setEditItemTarget(item)}
-              onDeleteClick={(item) => setDeleteItemTarget(item)}
-            />
-          </div>
-        ) : (
-          <InventoryCardList
-            items={sortedItems}
-            onRestockClick={(item) => setRestockItemTarget(item)}
-            onHistoryClick={(item) => setHistoryItemTarget(item)}
-            onEditClick={(item) => setEditItemTarget(item)}
-            onDeleteClick={(item) => setDeleteItemTarget(item)}
-          />
-        )}
-      </section>
-
-      {/* Toast Notification Notification Pill */}
+      {/* Toast Notification */}
       {toast && (
         <div
           className={`toast-pill ${
             toast.type === "error" ? "toast-error" : "toast-success"
           }`}
           role="status"
-          aria-live="polite"
         >
-          {toast.type === "error" ? (
-            <AlertCircle size={18} />
-          ) : (
-            <CheckCircle2 size={18} />
-          )}
+          {toast.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
           <span>{toast.message}</span>
         </div>
       )}
 
-      {/* Modals */}
-      <AddItemModal
-        isOpen={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
-        onSubmit={handleAddItem}
+      {/* Tax Strategy Architecture Controls Modal */}
+      <TaxRegimeSettingsModal
+        isOpen={isTaxSettingsOpen}
+        onClose={() => setIsTaxSettingsOpen(false)}
+        config={taxConfig}
+        lang={lang}
+        onConfigUpdated={loadAllData}
       />
 
-      <RestockModal
-        item={restockItemTarget}
-        isOpen={Boolean(restockItemTarget)}
-        onClose={() => setRestockItemTarget(null)}
-        onSubmit={handleRestockItem}
-      />
-
-      <HistoryModal
-        item={historyItemTarget}
-        isOpen={Boolean(historyItemTarget)}
-        onClose={() => setHistoryItemTarget(null)}
-      />
-
-      <EditItemModal
-        item={editItemTarget}
-        isOpen={Boolean(editItemTarget)}
-        onClose={() => setEditItemTarget(null)}
-        onSubmit={handleEditItem}
-      />
-
-      <DeleteItemModal
-        item={deleteItemTarget}
-        isOpen={Boolean(deleteItemTarget)}
-        onClose={() => setDeleteItemTarget(null)}
-        onConfirm={handleDeleteItem}
-      />
 
       <style jsx>{`
-        .inventory-section {
-          margin-top: 1rem;
-        }
-
-        .section-header-row {
-          display: flex;
-          align-items: baseline;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-          margin-bottom: 1.25rem;
-        }
-
-        .section-title {
+        .enterprise-nav-tabs {
           display: flex;
           align-items: center;
-          gap: 0.65rem;
-          font-size: 1.35rem;
+          gap: 0.5rem;
+          border-bottom: 1px solid var(--border-subtle);
+          padding-bottom: 0.75rem;
+          margin-bottom: 1.5rem;
+          overflow-x: auto;
+          scrollbar-width: none;
         }
 
-        .section-count-badge {
-          font-family: var(--font-body);
-          font-size: 0.775rem;
-          font-weight: 600;
-          color: var(--primary);
-          background: rgba(245, 158, 11, 0.12);
-          border: 1px solid rgba(245, 158, 11, 0.25);
-          padding: 0.15rem 0.6rem;
-          border-radius: var(--radius-full);
+        .enterprise-nav-tabs::-webkit-scrollbar {
+          display: none;
         }
 
-        .section-subtitle {
-          font-size: 0.85rem;
+        .nav-tab-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: var(--bg-surface);
+          border: 1px solid var(--border-subtle);
           color: var(--text-secondary);
+          font-family: var(--font-heading);
+          font-size: 0.925rem;
+          font-weight: 600;
+          padding: 0.65rem 1.25rem;
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all var(--transition-fast);
+        }
+
+        .nav-tab-btn:hover {
+          color: var(--text-primary);
+          border-color: var(--border-hover);
+        }
+
+        .nav-tab-btn.active {
+          background: var(--primary-gradient);
+          color: var(--text-inverse);
+          border-color: transparent;
+          box-shadow: 0 4px 14px var(--primary-glow);
         }
 
         .main-loading-state {
@@ -333,7 +390,6 @@ export default function InventoryDashboard() {
           to { transform: rotate(360deg); }
         }
 
-        /* Toast notifications */
         .toast-pill {
           position: fixed;
           bottom: 1.5rem;
@@ -349,15 +405,6 @@ export default function InventoryDashboard() {
           font-weight: 600;
           box-shadow: var(--shadow-lg);
           animation: fadeIn 200ms ease-out;
-        }
-
-        @media (max-width: 600px) {
-          .toast-pill {
-            bottom: 1rem;
-            left: 1rem;
-            right: 1rem;
-            justify-content: center;
-          }
         }
 
         .toast-success {

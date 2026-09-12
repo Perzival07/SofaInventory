@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { X, Trash2, AlertTriangle } from "lucide-react";
 import { InventoryItem } from "@/lib/types";
 
@@ -82,7 +82,7 @@ export function DeleteItemModal({ item, isOpen, onClose, onConfirm }: DeleteItem
           </button>
           <button
             type="button"
-            className="btn btn-danger"
+            className="btn btn-danger-solid"
             onClick={handleConfirm}
             disabled={isDeleting}
             id="btn-confirm-delete-item"
@@ -99,14 +99,14 @@ export function DeleteItemModal({ item, isOpen, onClose, onConfirm }: DeleteItem
         }
 
         .text-danger {
-          color: #f87171;
+          color: var(--status-out-stock-text);
         }
 
         .btn-icon-close {
           width: 36px;
           height: 36px;
           border-radius: var(--radius-sm);
-          background: rgba(255, 255, 255, 0.05);
+          background: transparent;
           border: none;
           color: var(--text-secondary);
           display: flex;
@@ -116,7 +116,7 @@ export function DeleteItemModal({ item, isOpen, onClose, onConfirm }: DeleteItem
         }
 
         .btn-icon-close:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: var(--bg-surface-elevated);
           color: var(--text-primary);
         }
 
@@ -128,7 +128,7 @@ export function DeleteItemModal({ item, isOpen, onClose, onConfirm }: DeleteItem
         }
 
         .item-to-delete-box {
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-surface-elevated);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-md);
           padding: 1rem;
@@ -150,11 +150,11 @@ export function DeleteItemModal({ item, isOpen, onClose, onConfirm }: DeleteItem
         }
 
         .danger-notice {
-          background: rgba(239, 68, 68, 0.08);
-          border: 1px solid rgba(239, 68, 68, 0.25);
+          background: var(--status-out-stock-bg);
+          border: 1px solid var(--status-out-stock-border);
           border-radius: var(--radius-md);
           padding: 0.85rem 1rem;
-          color: #fca5a5;
+          color: var(--status-out-stock-text);
           font-size: 0.825rem;
           line-height: 1.45;
         }

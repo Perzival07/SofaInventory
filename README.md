@@ -1,167 +1,173 @@
-# The Sofa Studio - Inventory Management System
+# The Sofa Studio & Manufacturing Co. — Barasat ERP & Inventory System
 
-A simple, no-login, web-based Inventory Management System built specifically for furniture shops (sofas, recliners, dining sets, beds, and accent pieces).
+A complete, production-grade Furniture Manufacturing, Job Work, and Retail Management System built specifically for furniture businesses operating in **Barasat, North 24 Parganas, West Bengal, India**.
 
-Designed for native zero-config deployment on **Vercel** with **Next.js (App Router)** and **Vercel Postgres (Neon)**.
-
----
-
-## 🛋️ Core Features
-
-- **No-Login Access**: Shop staff immediately land on the inventory view with zero barrier to entry. Single-tenant, single-shop architecture.
-- **Stock Dashboard**:
-  - Live stock quantities with colored badges (In Stock, Low Stock ≤3, Out of Stock).
-  - Current batch cost per unit in Indian Rupees (**₹**).
-  - Automatic inventory valuation (`Quantity × Current Batch Cost`).
-  - Search by furniture model, color, or category.
-  - Horizontal scrolling category filter chips with live counts.
-  - High-level KPI metrics bar (Total units, Total stock value in ₹, Active designs, Low stock alerts).
-- **Batch Restocking ("Renew Stock")**:
-  - Increase stock quantity by entered batch amount.
-  - Automatically updates the item's current cost per unit to this batch's price.
-  - Automatically appends a permanent, timestamped entry to the restock audit log.
-- **Append-Only History Log**:
-  - Chronological timeline (most recent first) tracking all restock events.
-  - Shows date, quantity added, batch unit cost, total batch outlay, and supplier/invoice notes.
-- **Touch-Optimized Responsive Design**:
-  - **Mobile (phones, 320–480px)**: 1-column card view, prominent 44px+ tap targets, clear readable ₹ totals without horizontal scrolling.
-  - **Tablet (counter-top screens, 600–1024px)**: 2-column card grid or compact table, comfortable modal dialogs.
-  - **Desktop (1024px+)**: Full data table with instant sorting, column highlights, and quick action buttons.
+Built with **Next.js 16 (App Router)**, **TypeScript**, and **Vanilla CSS**, deployed natively on **Vercel** with **Vercel Postgres (Neon)** with zero-config in-memory fallback for local demo and offline use.
 
 ---
 
-## 🗄️ Database Architecture (Vercel Postgres / Neon)
+## 🏛️ Business Architecture & Core Capabilities
 
-The database schema consists of two tables linked via a foreign key with cascade deletion.
+The system models the complete end-to-end furniture business:
 
-```sql
--- Table 1: items
-CREATE TABLE IF NOT EXISTS items (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    category VARCHAR(100) NOT NULL,
-    current_quantity INT NOT NULL DEFAULT 0 CHECK (current_quantity >= 0),
-    current_cost_per_unit NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (current_cost_per_unit >= 0),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_restocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Table 2: restock_history (Append-Only Log)
-CREATE TABLE IF NOT EXISTS restock_history (
-    id SERIAL PRIMARY KEY,
-    item_id INT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-    quantity_added INT NOT NULL CHECK (quantity_added > 0),
-    cost_per_unit NUMERIC(12, 2) NOT NULL CHECK (cost_per_unit >= 0),
-    restock_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    note TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Indexes for lightning-fast queries
-CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
-CREATE INDEX IF NOT EXISTS idx_items_name ON items(name);
-CREATE INDEX IF NOT EXISTS idx_restock_history_item_id_date ON restock_history(item_id, restock_date DESC);
+```
+Purchase → [1] Raw Material Store ──► [2] In-House Factory WIP ──► [4] Finished Goods Showroom
+                                 └──► [3] Stock with Vendor   ──► (Retail & Home Delivery)
 ```
 
-> The complete SQL file with seed data is located at [`schema.sql`](./schema.sql).
+### 1. The 4 Stock States Reconciled
+- **[1] Raw Material Store**: Tracks timber (Sal, Teak/Segun, Mehogini in CFT with moisture % and seasoning dates), sheet goods (plywood/MDF/blockboard by thickness), foam (PU foam sheets by density 28D–50D), fabrics/leatherette with dye-lot shade matching, and scrap offcuts salvage.
+- **[2] In-House WIP**: 9 sequential production stages (Carpentry Frame, Webbing & Springing, Foam Profiling, Cushion Core, Pattern Cutting, Sewing, Upholstery & Tufting, Wood Polishing, QC & Final Packaging). Tracks karigar piece-rate wages and gate pass approvals.
+- **[3] Stock with Vendor (Our Legal Asset)**: Material issued to local job workers (polishing, CNC carving, specialized stitching) remains our legal inventory asset at all times. Tracks job work orders, Rule 45 / Internal Delivery Challans, return reconciliation, scrap allowances, and 3-way matching.
+- **[4] Finished Goods & Retail**: Multi-box carton tracking (e.g. 4 boxes for an L-shape sofa), floor model display age tracking with markdown eligibility, and bilingual Cash Memo / Tax Invoice issuance.
 
 ---
 
-## 🚀 Step-by-Step Vercel Deployment Guide (Starting from Zero)
+### 2. Dormant Tax Regime Strategy Engine (Section 2)
+The business currently operates **below the ₹40 Lakh GST exemption threshold**. The GST engine is completely built and operates behind the dormant switch `tax_regime_enabled = false`:
 
-You can deploy this entire application (frontend, server actions, and Postgres database) to Vercel in less than 3 minutes.
-
-### Step 1: Push Code to GitHub
-Push this repository to your GitHub account:
-```bash
-git add .
-git commit -m "feat: complete furniture inventory management system"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/SofaInventory.git
-git push -u origin main
-```
-
-### Step 2: Import Project on Vercel
-1. Go to [vercel.com](https://vercel.com) and log in.
-2. Click **"Add New..."** > **"Project"**.
-3. Select your GitHub repository (`SofaInventory`) and click **"Import"**.
-4. Leave all build settings at their default values (Framework Preset: **Next.js**, Root Directory: `./`).
-5. Click **"Deploy"**.
-
-### Step 3: Provision Vercel Postgres (Neon)
-1. Once the initial build finishes, open your project dashboard in Vercel.
-2. Click the **"Storage"** tab in the top navigation.
-3. Click **"Create Database"** and select **"Postgres"** (powered by Neon).
-4. Choose a database name (e.g. `sofa-inventory-db`) and select the region closest to your shop (e.g., `Mumbai (bom1)` or your nearest region).
-5. Click **"Create"**.
-
-### Step 4: Connect Database to Your Project
-1. In the database dashboard, click the **"Quickstart"** or **".env.local"** tab.
-2. Select your `SofaInventory` project under **"Connect to Project"** and select **All Environments** (Production, Preview, Development).
-3. Click **"Connect"**.
-4. Vercel will automatically inject `POSTGRES_URL`, `DATABASE_URL`, and other credentials into your project environment variables with zero manual copying!
-
-### Step 5: Redeploy
-1. Go to the **"Deployments"** tab in Vercel.
-2. Click the three dots `...` on the latest deployment and click **"Redeploy"** (or push any commit to `main`).
-3. That's it! When the app loads for the first time, it automatically creates the tables and seeds initial furniture data if not already present.
+- **Unregistered Mode (`false`)**:
+  - Issues non-tax **Cash Memos** with `CM-YYYY-XXXX` numbering and zero tax columns.
+  - Purchases are capitalized at **landed cost (cost + GST)** with ₹0 ITC.
+  - Job work dispatches use **Internal Delivery Challans** with `IDC-YYYY-XXXX` numbering.
+  - E-way bill requirement: Not applicable for intra-state below ₹1,00,000 in West Bengal.
+- **Registered Mode (`true`)**:
+  - Issues statutory **Tax Invoices** with `INV-YYYY-XXXX` numbering, showing HSN codes and automated **CGST + SGST (Intra-state WB)** or **IGST (Interstate)** tax split.
+  - Purchases are split into **net taxable cost + creditable Input Tax Credit (ITC)**.
+  - Job work dispatches generate statutory **Rule 45 Job Work Challans** with Annexure B format.
+- **Historical Immutability & Reversibility (Section 2.3 Rules 1–6)**:
+  - Switching between regimes **never** alters historical documents. A Cash Memo issued under unregistered status remains a Cash Memo forever with zero tax breakdown.
+  - **Section 18(1)(a) Transitional Credit Service**: Automatically compiles an audit report of raw material and finished goods stock lots purchased from GST-registered vendors within the prior 12 months, calculating claimable ITC.
+  - Fully tested and certified by the automated Section 2.4 Acceptance Suite.
 
 ---
 
-## 💻 Local Development
-
-1. **Clone the repository**:
-   ```bash
-   cd SofaInventory
-   npm install
-   ```
-
-2. **Run locally (Instant Demo Mode)**:
-   ```bash
-   npm run dev
-   ```
-   Open `http://localhost:3000`.
-   > *Note: If `POSTGRES_URL` is not provided in `.env.local`, the application seamlessly runs in In-Memory Demo Mode with pre-populated furniture items so you can test all features immediately.*
-
-3. **Connect Local Environment to Vercel Postgres (Optional)**:
-   ```bash
-   npx vercel link
-   npx vercel env pull .env.local
-   npm run dev
-   ```
+### 3. FY Aggregate Turnover Watchdog & Section 24 Triggers
+- **Aggregate PAN Tracking**: Aggregates local showroom turnover with other businesses registered on the same proprietor/firm PAN.
+- **Color-Coded Alert Thresholds**:
+  - **Safe Zone (Green)**: Turnover < ₹30,00,000.
+  - **Amber Alert (Yellow)**: Turnover ≥ ₹30,00,000 (Warning to prepare GST registration).
+  - **Red Alert (Orange)**: Turnover ≥ ₹35,00,000 (Mandatory registration alert).
+  - **Blocking Alert (Red)**: Turnover ≥ ₹38,00,000 (System blocks unregistered sales until GSTIN is configured).
+- **Bengali Festive Season Uplift**: Projects year-end turnover factoring in 40–50% festive surges ahead of Durga Puja and Diwali (Bhadra–Ashwin).
+- **Section 24 Hard Triggers**: Warns or blocks sales if interstate delivery (outside WB PIN 700001–743711), e-commerce fulfillment, or unbundled service charges mandate compulsory registration regardless of turnover.
 
 ---
 
-## 📁 Project Structure
+### 4. Barasat Local Intelligence & Regional Operations
+- **Delivery Zones & Staircase Surcharges**:
+  - Zone 1: Barasat Town & Champadali More (₹500 flat)
+  - Zone 2: Madhyamgram & Hridaypur (₹800 flat)
+  - Zone 3: Habra & Ashoknagar (₹1,200 flat)
+  - Zone 4: North Kolkata (Dum Dum, Salt Lake, New Town, Airport) (₹1,800 flat)
+  - Floor Surcharge: ₹150 per floor from 2nd floor upwards when no service elevator is available.
+- **Monsoon Mode**:
+  - Monsoons in North 24 Parganas cause extreme humidity (>80%).
+  - Automatically raises timber moisture threshold, quarantines unseasoned timber with >14% moisture, and doubles foam/wood clamping and drying times.
+- **Bilingual Interface**: Seamless 1-click toggle between **English** and **বাংলা (Bengali)** across the entire ERP, receipts, and challans.
+- **Khata / Udhaar Ledger**: Local customer credit accounts, installment payment logging, outstanding balance tracking, and cash/UPI receipt generation.
+
+---
+
+## 💻 Tech Stack
+
+- **Framework**: [Next.js 16.3.4 (App Router)](https://nextjs.org/)
+- **Language**: TypeScript 5.7+
+- **Styling**: Vanilla CSS (Tailored Design System with Dark Mode, Glassmorphism, and HSL tokens)
+- **Database**: [Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres) powered by [Neon Serverless](https://neon.tech/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Testing**: Node test runner with `tsx` for TypeScript execution
+
+---
+
+## 🛠️ Project Structure
 
 ```
 SofaInventory/
-├── schema.sql                     # Exact Vercel Postgres DDL & seed data
-├── STAFF_GUIDE.md                 # 1-page printable cheat sheet for shop staff
+├── schema.sql                         # Complete PostgreSQL DDL (4 states, tax config, serials, Khata)
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx             # Root layout with Outfit & Inter typography
-│   │   ├── page.tsx               # Main responsive dashboard
-│   │   ├── actions.ts             # Next.js Server Actions (CRUD & Restock)
-│   │   ├── globals.css            # Luxury showroom design system (Vanilla CSS)
-│   │   └── api/
-│   │       └── init/route.ts      # Health check and schema verification API
+│   │   ├── actions.ts                 # Server Actions (Overview, tax toggle, sales, WIP, job work)
+│   │   ├── page.tsx                   # Main Enterprise ERP Dashboard
+│   │   ├── globals.css                # Enterprise design system & theme variables
+│   │   ├── materials/page.tsx         # Raw Materials management route
+│   │   ├── production/page.tsx        # In-House WIP tracking route
+│   │   ├── jobwork/page.tsx           # Stock-with-vendor route
+│   │   ├── purchases/page.tsx         # GRN & Purchase orders route
+│   │   ├── bom/page.tsx               # Bill of Materials route
+│   │   └── settings/page.tsx          # Tax & statutory settings route
 │   ├── components/
-│   │   ├── Header.tsx             # Branding, DB status pill, Add Item CTA
-│   │   ├── StatsOverview.tsx      # 4 KPI cards (Units, ₹ Valuation, Alert)
-│   │   ├── FilterBar.tsx          # Real-time search, category chips, view toggle
-│   │   ├── InventoryTable.tsx     # Desktop information-dense table view
-│   │   ├── InventoryCardList.tsx  # Mobile & tablet touch-friendly card grid
-│   │   ├── AddItemModal.tsx       # New furniture item creation dialog
-│   │   ├── RestockModal.tsx       # Core batch restock dialog
-│   │   ├── HistoryModal.tsx       # Append-only chronological audit log
-│   │   ├── EditItemModal.tsx      # Quick name and category editor
-│   │   └── DeleteItemModal.tsx    # Safe destructive action confirmation
+│   │   ├── FourStockStatesOverview.tsx# Visual 4-state inventory reconciliation
+│   │   ├── TurnoverWatchdogCard.tsx   # FY Turnover gauge & Section 24 alert panel
+│   │   ├── TaxRegimeSettingsModal.tsx # GST switchover & Sec 18(1)(a) credit report modal
+│   │   ├── RetailSalesAndKhata.tsx    # POS, Billing, Zone delivery & Khata ledger
+│   │   ├── ProductionStageTracker.tsx # 9-stage WIP tracker & karigar piece-rate logger
+│   │   ├── JobWorkVendorManager.tsx   # Vendor challans, reconciliation & Make-vs-Buy analyzer
+│   │   ├── RawMaterialStoreView.tsx   # Timber moisture, dye lots & offcut scrap store
+│   │   ├── MonsoonModeBanner.tsx      # Monsoon humidity control banner
+│   │   ├── Header.tsx                 # Regional branding, tax badge, and language switcher
+│   │   └── LanguageToggle.tsx         # English / বাংলা switcher
 │   ├── lib/
-│   │   ├── db.ts                  # Neon / Vercel Postgres client + memory fallback
-│   │   ├── formatters.ts          # Indian Rupee (₹) & date formatters
-│   │   └── types.ts               # TypeScript interfaces
+│   │   ├── types.ts                   # Domain TypeScript models
+│   │   ├── tax-strategy.ts            # Strategy pattern governing sales, purchases, challans & credit
+│   │   ├── turnover-watchdog.ts       # Turnover calculation, festival uplift & trigger checks
+│   │   ├── costing-engine.ts          # Dual-costing roll-up & Make-vs-Buy analyzer
+│   │   ├── local-intelligence.ts      # Barasat delivery zones, floor fees & monsoon thresholds
+│   │   ├── inventory-states.ts        # UOM conversions, dye lots, ATP & carton integrity
+│   │   ├── i18n.ts                    # English and Bengali (বাংলা) translations
+│   │   └── db.ts                      # Postgres client & in-memory fallback store
 │   └── __tests__/
-│       └── inventory.test.ts      # Automated end-to-end integration test suite
+│       ├── tax-regime-toggle.test.ts  # Section 2.4 Acceptance Test Suite (20 sales, toggle, credit)
+│       └── inventory.test.ts          # Core inventory unit tests
 ```
+
+---
+
+## 🧪 Testing & Verification
+
+### Running Acceptance Tests
+
+Run the Section 2.4 Tax Regime & Immutability Acceptance Suite:
+```bash
+npx tsx src/__tests__/tax-regime-toggle.test.ts
+```
+Expected output:
+```
+===============================================================================
+  ALL SECTION 2.4 ACCEPTANCE CRITERIA PASSED 100% SUCCESSFULLY!
+===============================================================================
+```
+
+Run the Core Inventory Unit Tests:
+```bash
+npx tsx src/__tests__/inventory.test.ts
+```
+
+### Production Build
+
+Verify the Next.js production build:
+```bash
+npm run build
+```
+
+---
+
+## 🚀 Deployment to Vercel
+
+1. Push this repository to GitHub.
+2. In the [Vercel Dashboard](https://vercel.com/), import the repository.
+3. In the **Storage** tab, create a **Vercel Postgres (Neon)** instance in `Mumbai (bom1)`.
+4. Connect the database to the project (injects `POSTGRES_URL`).
+5. Run [`schema.sql`](./schema.sql) in the Vercel Query Console to initialize the database tables.
+6. The app will automatically connect to Postgres and display the active database indicator!
+
+---
+
+## 📄 Licencing & Local Compliance
+
+Designed for compliance with:
+- **West Bengal GST Act, 2017 & CGST Act, 2017**
+- **Section 22**: ₹40 Lakh threshold limit for suppliers of goods in West Bengal.
+- **Section 18(1)(a)**: Input tax credit on stock held at the date of registration.
+- **Rule 45**: Conditions and restrictions in respect of inputs and capital goods sent to job worker.
+- **Barasat Municipality**: Trade Licence & West Bengal Fire and Emergency Services (WBFES) tracking.
