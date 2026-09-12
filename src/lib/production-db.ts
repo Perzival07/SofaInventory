@@ -40,7 +40,7 @@ function getSql() {
   return connectionString ? neon(connectionString) : null;
 }
 
-const CURRENT_ACTOR = "owner";
+import { currentActor } from "./actor";
 
 // -----------------------------------------------------------------------------
 // Standard routing for a furniture unit, and the floor team.
@@ -198,7 +198,7 @@ async function logAudit(entity: string, entityId: string, action: string, detail
   if (!sql) return;
   try {
     await sql`INSERT INTO audit_log (entity, entity_id, action, actor, details)
-              VALUES (${entity}, ${entityId}, ${action}, ${CURRENT_ACTOR}, ${JSON.stringify(details)}::jsonb)`;
+              VALUES (${entity}, ${entityId}, ${action}, ${await currentActor()}, ${JSON.stringify(details)}::jsonb)`;
   } catch (error) {
     console.error("Failed to write audit log:", error);
   }

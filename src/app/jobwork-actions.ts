@@ -1,5 +1,8 @@
 "use server";
 
+import { requireSession } from "@/lib/require-session";
+
+
 import { revalidatePath } from "next/cache";
 import {
   getJobWorkVendors, getJobWorkOrders, createJobWorkOrder, dispatchChallan,
@@ -33,6 +36,7 @@ export interface JobWorkPageData {
 }
 
 export async function fetchJobWorkPageDataAction(): Promise<JobWorkPageData> {
+  await requireSession();
   const [
     vendors, orders, challans, vendorStock, reconciliation, matches,
     scorecards, mvb, materials, products, workOrders, regime,
@@ -55,6 +59,7 @@ export async function fetchJobWorkPageDataAction(): Promise<JobWorkPageData> {
 export async function createJobWorkOrderAction(
   input: JobWorkOrderInput
 ): Promise<{ success: boolean; jwNumber?: string; error?: string }> {
+  await requireSession();
   try {
     if (!input.vendor_id) return { success: false, error: "Select a vendor." };
     if (input.expected_output_qty <= 0) {
@@ -78,6 +83,7 @@ export async function dispatchChallanAction(input: {
   value?: number; ewayRequired?: boolean; ewayReason?: string | null;
   warnings?: string[]; error?: string;
 }> {
+  await requireSession();
   try {
     const lines = input.lines.filter((l) => l.quantity > 0);
     if (!lines.length) return { success: false, error: "Add at least one material to dispatch." };
@@ -107,6 +113,7 @@ export async function receiveJobWorkAction(
   success: boolean; wastage?: WastageAssessment[]; recovery?: number;
   warnings?: string[]; error?: string;
 }> {
+  await requireSession();
   try {
     if (input.good_qty < 0 || input.rejected_qty < 0) {
       return { success: false, error: "Quantities cannot be negative." };
@@ -133,6 +140,7 @@ export async function recordVendorInvoiceAction(input: {
   jw_order_id: number; invoice_no: string; invoice_date: string;
   qty: number; rate: number; amount: number;
 }): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     if (!input.invoice_no.trim()) return { success: false, error: "Invoice number is required." };
     await recordVendorInvoice(input);

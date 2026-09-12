@@ -1,5 +1,8 @@
 "use server";
 
+import { requireSession } from "@/lib/require-session";
+
+
 import { revalidatePath } from "next/cache";
 import {
   getTaxConfig,
@@ -22,6 +25,7 @@ export interface TaxSettingsData {
 }
 
 export async function fetchTaxSettingsAction(): Promise<TaxSettingsData> {
+  await requireSession();
   const [config, periods, regime, rules] = await Promise.all([
     getTaxConfig(),
     getRegimePeriods(),
@@ -36,6 +40,7 @@ export async function fetchTransitionalCreditAction(): Promise<{
   claimable_total: number;
   blocked_total: number;
 }> {
+  await requireSession();
   return getTransitionalCreditReport();
 }
 
@@ -50,6 +55,7 @@ export async function enableTaxRegimeAction(input: {
   filing_frequency: "monthly" | "quarterly";
   legal_name?: string | null;
 }): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     const gstin = input.registration_number.trim().toUpperCase();
 
@@ -83,6 +89,7 @@ export async function enableTaxRegimeAction(input: {
 export async function disableTaxRegimeAction(
   deregistrationDate: string
 ): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     if (!deregistrationDate) {
       return { success: false, error: "A deregistration date is required." };
@@ -115,6 +122,7 @@ export async function updateTaxRuleAction(
   id: number,
   patch: { numeric_value?: number; verified_by_ca?: boolean }
 ): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     await updateTaxRule(id, patch);
     revalidatePath("/settings");

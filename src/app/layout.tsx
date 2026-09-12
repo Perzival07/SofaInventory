@@ -15,9 +15,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "The Sofa Studio | Inventory Management System",
+  title: "Loknath Sofa Center | Production & Inventory",
   description:
-    "Internal furniture stock and inventory management system with batch restocking, history logs, and instant valuation in Indian Rupees (₹).",
+    "Manufacturing and retail management for Loknath Sofa Center, Barasat — raw material, BOM, production, job work, sales and khata.",
+  // Next serves src/app/icon.png and apple-icon.png automatically; naming them
+  // here keeps the home-screen title short when saved on a phone.
+  appleWebApp: { title: "Loknath", capable: true, statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -33,10 +36,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${outfit.variable} ${inter.variable}`}>
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-      </head>
+    // data-scroll-behavior tells Next.js the smooth scrolling in globals.css is
+    // intentional, so it jumps rather than animates on route transitions.
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${outfit.variable} ${inter.variable}`}
+    >
       <body>
         {children}
       </body>

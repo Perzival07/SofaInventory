@@ -1,5 +1,8 @@
 "use server";
 
+import { requireSession } from "@/lib/require-session";
+
+
 import { revalidatePath } from "next/cache";
 import {
   getMaterials,
@@ -42,6 +45,7 @@ export async function fetchMaterialsAction(
   search?: string,
   type?: string
 ): Promise<MaterialsPageData> {
+  await requireSession();
   const [materials, categories, uoms] = await Promise.all([
     getMaterials(search, type),
     getMaterialCategories(),
@@ -53,6 +57,7 @@ export async function fetchMaterialsAction(
 export async function fetchMaterialBatchesAction(
   materialId: number
 ): Promise<{ material: Material | null; batches: MaterialBatch[] }> {
+  await requireSession();
   const [material, batches] = await Promise.all([
     getMaterialById(materialId),
     getMaterialBatches(materialId),
@@ -64,6 +69,7 @@ export async function saveMaterialAction(
   input: MaterialInput,
   id?: number
 ): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     if (!input.code.trim()) return { success: false, error: "Material code is required." };
     if (!input.name.trim()) return { success: false, error: "Material name is required." };
@@ -86,6 +92,7 @@ export async function addBatchAction(
   materialId: number,
   input: BatchInput
 ): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     if (!input.batch_no.trim()) return { success: false, error: "Batch number is required." };
     if (input.quantity <= 0) return { success: false, error: "Quantity must be greater than zero." };
@@ -102,6 +109,7 @@ export async function addBatchAction(
 export async function deactivateMaterialAction(
   id: number
 ): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     await deactivateMaterial(id);
     revalidatePath("/materials");
@@ -118,11 +126,13 @@ export interface BomPageData {
 }
 
 export async function fetchBomPageDataAction(): Promise<BomPageData> {
+  await requireSession();
   const [boms, products, materials] = await Promise.all([getBoms(), getProducts(), getMaterials()]);
   return { boms, products, materials };
 }
 
 export async function fetchBomLinesAction(bomId: number): Promise<BomLine[]> {
+  await requireSession();
   return getBomLines(bomId);
 }
 
@@ -130,10 +140,12 @@ export async function explodeBomAction(
   productId: number,
   quantity: number
 ): Promise<ExplodedRequirement[]> {
+  await requireSession();
   return explodeBom(productId, quantity);
 }
 
 export async function saveBomAction(input: BomInput): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     if (!input.product_id) return { success: false, error: "Select a product for this BOM." };
     if (!input.lines.length) return { success: false, error: "Add at least one BOM line." };
@@ -154,6 +166,7 @@ export async function createProductAction(input: {
   category?: string | null;
   uom: string;
 }): Promise<{ success: boolean; product?: Product; error?: string }> {
+  await requireSession();
   try {
     if (!input.code.trim() || !input.name.trim()) {
       return { success: false, error: "Product code and name are required." };

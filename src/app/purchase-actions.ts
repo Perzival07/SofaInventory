@@ -1,5 +1,8 @@
 "use server";
 
+import { requireSession } from "@/lib/require-session";
+
+
 import { revalidatePath } from "next/cache";
 import {
   getSuppliers,
@@ -36,6 +39,7 @@ export interface PurchasePageData {
 }
 
 export async function fetchPurchasePageDataAction(): Promise<PurchasePageData> {
+  await requireSession();
   const [purchaseOrders, grns, suppliers, materials, regime] = await Promise.all([
     getPurchaseOrders(),
     getGrns(),
@@ -47,16 +51,19 @@ export async function fetchPurchasePageDataAction(): Promise<PurchasePageData> {
 }
 
 export async function fetchPoLinesAction(poId: number): Promise<PurchaseOrderLine[]> {
+  await requireSession();
   return getPurchaseOrderLines(poId);
 }
 
 export async function fetchPriceHistoryAction(materialId: number): Promise<PriceHistoryPoint[]> {
+  await requireSession();
   return getPriceHistory(materialId);
 }
 
 export async function createSupplierAction(
   input: SupplierInput
 ): Promise<{ success: boolean; supplier?: Supplier; error?: string }> {
+  await requireSession();
   try {
     if (!input.code.trim() || !input.name.trim()) {
       return { success: false, error: "Supplier code and name are required." };
@@ -72,6 +79,7 @@ export async function createSupplierAction(
 export async function createPurchaseOrderAction(
   input: PurchaseOrderInput
 ): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     if (!input.supplier_id) return { success: false, error: "Select a supplier." };
 
@@ -92,6 +100,7 @@ export async function createPurchaseOrderAction(
 export async function receiveGrnAction(
   input: GrnInput
 ): Promise<{ success: boolean; posted?: PostedGrn; grnNumber?: string; error?: string }> {
+  await requireSession();
   try {
     if (!input.supplier_id) return { success: false, error: "Select a supplier." };
     if (!input.receipt_date) return { success: false, error: "Receipt date is required." };

@@ -11,13 +11,18 @@
     "test:grn": "tsx src/lib/__tests__/grn-costing.test.ts",
     "test:production": "tsx src/lib/__tests__/production-logic.test.ts",
     "test:jobwork": "tsx src/lib/__tests__/jobwork-logic.test.ts",
-    "test": "npm run test:tax && npm run test:grn && npm run test:production && npm run test:jobwork"
+    "test:sales": "tsx src/lib/__tests__/sales-logic.test.ts",
+    "test:analytics": "tsx src/lib/__tests__/analytics-logic.test.ts",
+    "test:crypto": "tsx src/lib/__tests__/secret-crypto.test.ts",
+    "test:auth": "tsx src/lib/__tests__/auth-config.test.ts",
+    "test": "npm run test:tax && npm run test:grn && npm run test:production && npm run test:jobwork && npm run test:sales && npm run test:analytics && npm run test:crypto && npm run test:auth"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@vercel/postgres": "^0.10.0",
     "lucide-react": "^1.44.0",
     "next": "16.3.4",
+    "next-auth": "^5.0.0-beta.32",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

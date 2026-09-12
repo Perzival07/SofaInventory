@@ -1,5 +1,8 @@
 "use server";
 
+import { requireSession } from "@/lib/require-session";
+
+
 import { revalidatePath } from "next/cache";
 import {
   getOperations,
@@ -34,6 +37,7 @@ export interface ProductionPageData {
 }
 
 export async function fetchProductionPageDataAction(): Promise<ProductionPageData> {
+  await requireSession();
   const [workOrders, products, operations, karigars, wages, recentEntries] = await Promise.all([
     getWorkOrders(),
     getProducts(),
@@ -49,6 +53,7 @@ export async function checkAvailabilityAction(
   productId: number,
   quantity: number
 ): Promise<MaterialRequirement[]> {
+  await requireSession();
   if (!productId || quantity <= 0) return [];
   return checkAvailability(productId, quantity);
 }
@@ -61,6 +66,7 @@ export async function createWorkOrderAction(input: {
   due_date?: string | null;
   notes?: string | null;
 }): Promise<{ success: boolean; woNumber?: string; shortages?: number; error?: string }> {
+  await requireSession();
   try {
     if (!input.product_id) return { success: false, error: "Select a product." };
     if (input.quantity <= 0) return { success: false, error: "Quantity must be at least 1." };
@@ -86,6 +92,7 @@ export interface WorkOrderDetail {
 }
 
 export async function fetchWorkOrderDetailAction(woId: number): Promise<WorkOrderDetail> {
+  await requireSession();
   const workOrders = await getWorkOrders();
   const wo = workOrders.find((w) => w.id === woId);
 
@@ -101,6 +108,7 @@ export async function fetchWorkOrderDetailAction(woId: number): Promise<WorkOrde
 }
 
 export async function fetchWorkOrderOperationsAction(woId: number) {
+  await requireSession();
   return getWorkOrderOperations(woId);
 }
 
@@ -110,6 +118,7 @@ export async function issueMaterialsAction(input: {
   issued_to?: string | null;
   lines: IssueLineInput[];
 }): Promise<{ success: boolean; issueNumber?: string; warnings?: string[]; error?: string }> {
+  await requireSession();
   try {
     const lines = input.lines.filter((l) => l.quantity > 0);
     if (!lines.length) return { success: false, error: "Enter a quantity on at least one line." };
@@ -128,6 +137,7 @@ export async function issueMaterialsAction(input: {
 export async function recordProductionAction(
   input: ProductionEntryInput
 ): Promise<{ success: boolean; error?: string }> {
+  await requireSession();
   try {
     if (!input.operation_id) return { success: false, error: "Select an operation." };
     if (input.completed_quantity < 0 || input.rejected_quantity < 0 || input.rework_quantity < 0) {

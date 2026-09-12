@@ -23,8 +23,7 @@ function getSql() {
   return connectionString ? neon(connectionString) : null;
 }
 
-/** Actor recorded on audit rows. Becomes the Google-authenticated email once sign-in is added. */
-const CURRENT_ACTOR = "owner";
+import { currentActor } from "./actor";
 
 // -----------------------------------------------------------------------------
 // In-memory demo store (used when POSTGRES_URL is absent)
@@ -384,7 +383,7 @@ async function logAudit(
   if (!sql) return;
   try {
     await sql`INSERT INTO audit_log (entity, entity_id, action, actor, details)
-              VALUES (${entity}, ${String(entityId)}, ${action}, ${CURRENT_ACTOR},
+              VALUES (${entity}, ${String(entityId)}, ${action}, ${await currentActor()},
                       ${JSON.stringify(details ?? {})}::jsonb)`;
   } catch (error) {
     console.error("Failed to write audit log:", error);

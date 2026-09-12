@@ -3,20 +3,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Armchair,
   LayoutDashboard,
   Boxes,
   Network,
   Truck,
   Factory,
   Handshake,
+  ShoppingCart,
+  BarChart3,
+  KeyRound,
   Settings,
   Database,
   X,
 } from "lucide-react";
 
+import { Logo } from "@/components/Logo";
+import { SessionFooter } from "@/components/SessionFooter";
+import type { SessionInfo } from "@/app/auth-actions";
+
 interface SidebarProps {
   dbStatus: { connected: boolean; provider: string };
+  session: SessionInfo;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
 }
@@ -28,10 +35,13 @@ const NAV_ITEMS = [
   { href: "/bom", label: "BOM & Costing", icon: Network },
   { href: "/production", label: "Production", icon: Factory },
   { href: "/jobwork", label: "Job Work", icon: Handshake },
+  { href: "/sales", label: "Sales & Billing", icon: ShoppingCart },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/integrations", label: "Integrations & Keys", icon: KeyRound },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar({ dbStatus, isMobileOpen, onCloseMobile }: SidebarProps) {
+export function Sidebar({ dbStatus, session, isMobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -46,7 +56,7 @@ export function Sidebar({ dbStatus, isMobileOpen, onCloseMobile }: SidebarProps)
       >
         <div className="sidebar-brand">
           <div className="brand-icon">
-            <Armchair size={20} strokeWidth={2.2} />
+            <Logo size={44} variant="mark" priority />
           </div>
           <div className="brand-text">
             <p className="brand-name">Loknath Sofa Center</p>
@@ -76,6 +86,7 @@ export function Sidebar({ dbStatus, isMobileOpen, onCloseMobile }: SidebarProps)
         </nav>
 
         <div className="sidebar-footer">
+          <SessionFooter email={session.email} name={session.name} />
           <div
             className={`db-indicator ${dbStatus.connected ? "db-connected" : "db-demo"}`}
             title={
@@ -142,14 +153,11 @@ export function Sidebar({ dbStatus, isMobileOpen, onCloseMobile }: SidebarProps)
           border-bottom: 1px solid var(--border-subtle);
         }
 
+        /* No tint or border — the logo carries its own colours and white ground. */
         .brand-icon {
-          width: 38px;
-          height: 38px;
-          min-width: 38px;
-          border-radius: var(--radius-md);
-          background: var(--primary-soft);
-          border: 1px solid var(--primary-soft-border);
-          color: var(--primary);
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
           display: flex;
           align-items: center;
           justify-content: center;
