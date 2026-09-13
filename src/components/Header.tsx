@@ -22,7 +22,7 @@ export function Header({ title, subtitle, actionLabel, onActionClick, onMenuClic
         >
           <Menu size={20} />
         </button>
-        <div>
+        <div className="topbar-heading">
           <h1 className="topbar-title">{title}</h1>
           <p className="topbar-subtitle">{subtitle}</p>
         </div>
@@ -64,6 +64,17 @@ export function Header({ title, subtitle, actionLabel, onActionClick, onMenuClic
           align-items: center;
           gap: 0.85rem;
           min-width: 0;
+        }
+
+        /* Without min-width: 0 this flex child refuses to shrink below its
+           nowrap subtitle, which then runs under the action button and widens
+           the page on phones. */
+        .topbar-heading {
+          min-width: 0;
+        }
+
+        .btn-add-item {
+          flex-shrink: 0;
         }
 
         .menu-btn {
