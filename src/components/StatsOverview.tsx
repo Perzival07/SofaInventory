@@ -84,18 +84,21 @@ export function StatsOverview({ summary }: StatsOverviewProps) {
           margin-bottom: 1.75rem;
         }
 
-        /* Mobile phones (2 cols for compact high-readability stats) */
-        @media (min-width: 480px) {
+        /* minmax(0, 1fr) rather than 1fr: a plain 1fr track cannot shrink below
+           its card's longest unbreakable line, which pushed the right column
+           off-screen on narrow phones. Breakpoints leave each card enough room
+           for the rupee valuation; above 1024px the sidebar takes 260px, so
+           four columns only fit on wide screens. */
+        @media (min-width: 560px) {
           .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 1rem;
           }
         }
 
-        /* Desktop */
-        @media (min-width: 1024px) {
+        @media (min-width: 1400px) {
           .stats-grid {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 1.25rem;
           }
         }
@@ -105,6 +108,7 @@ export function StatsOverview({ summary }: StatsOverviewProps) {
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-lg);
           padding: 1.15rem 1.25rem;
+          min-width: 0;
           display: flex;
           align-items: flex-start;
           gap: 0.85rem;
@@ -203,9 +207,6 @@ export function StatsOverview({ summary }: StatsOverviewProps) {
           font-size: 0.75rem;
           color: var(--text-muted);
           margin-top: 0.2rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
       `}</style>
     </section>
